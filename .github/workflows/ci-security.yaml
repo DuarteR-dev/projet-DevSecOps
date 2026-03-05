@@ -33,7 +33,7 @@ jobs:
         uses: ansible/ansible-lint@main
 
       - name: Run Checkov
-        uses: bridgecrewio/checkov-action@main
+        uses: bridgecrewio/checkov-action@master
         with:
           directory: .
           framework: ansible
