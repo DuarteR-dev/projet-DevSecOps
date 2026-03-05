@@ -1,0 +1,8 @@
+network:
+  version: 2
+  ethernets:
+    enp0s1:
+      addresses:
+        - {{ ansible_host }}/24 
+      nameservers:
+        addresses: [1.1.1.1, 8.8.8.8]

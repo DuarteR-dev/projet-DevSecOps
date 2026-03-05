@@ -1,0 +1,12 @@
+---
+- name: apply netplan
+  command: netplan apply
+
+- name: redémarrer ssh
+  service:
+    name: ssh
+    state: restarted
+
+- name: recharger ufw
+  ufw:
+    state: reloaded

@@ -1,0 +1,11 @@
+---
+- name: Provisionnement de l'infrastructure
+  hosts: hypervisors
+  become: true
+  vars_files:
+    - /home/etu/.iac_passwd.yaml
+  roles:
+    - provision_vms
+
+- name: Lancement de la configuration
+  import_playbook: site.yaml

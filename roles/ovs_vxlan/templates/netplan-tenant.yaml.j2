@@ -1,0 +1,40 @@
+network:
+  version: 2
+  renderer: networkd
+
+  ethernets:
+    enp0s1:
+      dhcp4: false
+      dhcp6: false
+
+  vlans:
+    vlan{{ underlay_vlan }}:
+      id: {{ underlay_vlan }}
+      link: enp0s1
+      addresses:
+        - {{ underlay_ip }}/{{ underlay_cidr }}
+      routes:
+        - to: default
+          via: {{ underlay_gw }}
+      nameservers:
+        addresses:
+          - 172.16.0.2
+          - 9.9.9.9
+
+  tunnels:
+    vxlanGreenBlue:
+      mode: vxlan
+      remote: {{ vxlan_remote_ip }}
+      local: {{ underlay_ip }}
+      id: {{ vxlan_id }}
+      ttl: 255
+      mtu: 9000
+
+  bridges:
+    {{ ovs_bridge_name }}:
+      interfaces: [vxlanGreenBlue]
+      openvswitch: {}
+      addresses:
+        - {{ overlay_ip_v4 }}
+        - "{{ overlay_ip_v6 }}"
+      mtu: {{ overlay_mtu }}

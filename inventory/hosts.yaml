@@ -1,0 +1,28 @@
+---
+hypervisors:
+  hosts:
+    oscar:
+      # Host oscar6
+      #   HostName XXXX:XXX:XXX:XXX::XXX
+      #   User XXXXXXXXXXXX
+      #   Port 2222
+      #   ForwardAgent yes
+      ansible_host: oscar
+  vars:
+    ansible_ssh_user: "{{ hypervisor_user }}"
+    ansible_ssh_pass: "{{ hypervisor_pass }}"
+    ansible_ssh_port: 22
+
+vms:
+  hosts:
+    vm-red:
+      ansible_host: 10.0.128.66
+    vm-blue:
+      ansible_host: 172.18.169.10
+    vm-green:
+      ansible_host: 172.18.170.10
+
+all:
+  children:
+    hypervisors:
+    vms:

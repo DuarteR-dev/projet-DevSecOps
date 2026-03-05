@@ -1,0 +1,33 @@
+---
+- name: Préparer les répertoires pour les images KVM
+  file:
+    path: "/var/lib/libvirt/images/{{ item }}"
+    state: directory
+    mode: '0755'
+  loop: "{{ groups['vms'] }}"
+
+- name: Créer le disque virtuel (clonage de l'image de base)
+  command: >
+    qemu-img create -f qcow2 -b /var/lib/libvirt/images/{{ hostvars[item]['master_image'] }}
+    /var/lib/libvirt/images/{{ item }}/disk.qcow2 {{ hostvars['oscar']['filesystem_resize'] }}G
+  loop: "{{ groups['vms'] }}"
+  args:
+    creates: "/var/lib/libvirt/images/{{ item }}/disk.qcow2"
+
+- name: Générer le fichier cloud-init (user-data)
+  template:
+    src: "user-data.j2"
+    dest: "/var/lib/libvirt/images/{{ item }}/user-data"
+    mode: '0644'
+  loop: "{{ groups['vms'] }}"
+
+- name: Générer le fichier cloud-init (network-data)
+  template:
+    src: "network-data.j2"
+    dest: "/var/lib/libvirt/images/{{ item }}/network-data"
+    mode: '0644'
+  loop: "{{ groups['vms'] }}"
+
+# TODO
+# 1. La commande `cloud-localds` pour compiler user-data et network-data en seed.iso
+# 2. La commande `virt-install` pour démarrer la machine

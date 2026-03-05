@@ -1,0 +1,36 @@
+network:
+  version: 2
+  ethernets:
+    enp0s1:
+      dhcp4: false
+      dhcp6: false
+  vlans:
+    vlan{{ mgmt_vlan }}:
+      id: {{ mgmt_vlan }}
+      link: enp0s1
+      addresses:
+        - {{ mgmt_ip_v4 }}
+        - {{ mgmt_ip_v6 }}
+      routes:
+        - to: default
+          via: {{ mgmt_gw }}
+      nameservers:
+        addresses: [172.16.0.2, 9.9.9.9]
+
+{% for vlan in tenant_vlans %}
+    vlan{{ vlan.id }}:
+      id: {{ vlan.id }}
+      link: enp0s1
+      addresses:
+        - {{ vlan.ip }}
+      routes:
+        - to: default
+          via: {{ mgmt_gw }}
+          table: {{ vlan.table }}
+      routing-policy:
+        - from: {{ vlan.network }}
+          table: {{ vlan.table }}
+        - mark: {{ vlan.mark }}
+          from: 0.0.0.0/0
+          table: {{ vlan.table }}
+{% endfor %}

@@ -1,0 +1,37 @@
+---
+lab_name: projet-devsecops
+lab_path: "{{ ansible_env.HOME }}/labs/{{ lab_name }}"
+cloud_url: cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-amd64.qcow2
+image_name: debian-12-amd64.qcow2
+filesystem_resize: 2 # GB par VM
+oob_vlan: 126
+
+switches:
+  - name: dsw-host
+    ports:
+      # VM Bleue
+      - name: tap241
+        type: OVSPort
+        vlan_mode: trunk
+        trunks: [681, 683]
+      
+      # VM Verte
+      - name: tap242
+        type: OVSPort
+        vlan_mode: trunk
+        trunks: [682, 683]
+      
+      # VM Rouge
+      - name: tap243
+        type: OVSPort
+        vlan_mode: trunk
+        trunks: [128, 681, 682]
+      
+      # - name: tap240
+      #   type: OVSPort
+      #   vlan_mode: access
+      #   tag: 60
+      # - name: tap144
+      #   type: OVSPort
+      #   vlan_mode: access
+      #   tag: 60

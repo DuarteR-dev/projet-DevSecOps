@@ -1,0 +1,21 @@
+---
+vm_name: rougeVM
+tapnum: 243
+master_image: debian-testing-amd64.qcow2
+
+mgmt_vlan: 128
+mgmt_ip_v4: 10.0.128.66/28
+mgmt_ip_v6: "2001:678:3fc:80::2/64"
+mgmt_gw: 10.0.128.65
+
+tenant_vlans:
+  - id: 681
+    ip: 172.18.169.1/24
+    network: 172.18.169.0/24
+    table: 681
+    mark: 220
+  - id: 682
+    ip: 172.18.170.1/24
+    network: 172.18.170.0/24
+    table: 682
+    mark: 221

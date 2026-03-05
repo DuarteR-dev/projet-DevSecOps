@@ -1,0 +1,4 @@
+.ansible/
+.iac_passwd.yaml
+.vault_pass.txt
+*.retry

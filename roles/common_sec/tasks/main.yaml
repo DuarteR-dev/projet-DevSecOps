@@ -1,0 +1,63 @@
+---
+# 1. Mettre à jour le système
+- name: Mettre à jour le cache apt et les paquets
+  apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+# 2. Installer les outils de base + Sécurité
+- name: Installer les paquets requis
+  apt:
+    name:
+      - fail2ban
+      - ufw
+      - tcpdump
+      - vim
+      - curl
+    state: present
+
+# 3. Sécurisation de SSH
+- name: Sécuriser la configuration SSH
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  loop:
+    - { regexp: '^#?PermitRootLogin', line: 'PermitRootLogin {{ permit_root_login | default("no") }}' }
+    - { regexp: '^#?PasswordAuthentication', line: 'PasswordAuthentication {{ password_authentication | default("no") }}' }
+  notify: redémarrer ssh
+
+# 4. Configurer le Pare-feu (UFW)
+- name: UFW - Autoriser le routage (Forward) pour la VM Rouge
+  lineinfile:
+    path: /etc/default/ufw
+    regexp: '^DEFAULT_FORWARD_POLICY='
+    line: 'DEFAULT_FORWARD_POLICY="ACCEPT"'
+  when: inventory_hostname == 'vm-red'
+  notify: recharger ufw
+
+- name: UFW - Autoriser SSH (partout)
+  ufw:
+    rule: allow
+    port: '22'
+    proto: tcp
+
+- name: UFW - Autoriser VXLAN (Uniquement pour Bleu et Vert)
+  ufw:
+    rule: allow
+    port: '4789'
+    proto: udp
+  when: inventory_hostname in ['vm-blue', 'vm-green']
+
+- name: UFW - Activer le pare-feu et refuser par défaut en entrée
+  ufw:
+    state: enabled
+    policy: deny
+    direction: incoming
+
+# 5. Fail2Ban
+- name: Activer et démarrer Fail2Ban
+  service:
+    name: fail2ban
+    state: started
+    enabled: true
