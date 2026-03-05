@@ -35,6 +35,7 @@ jobs:
       - name: Run Checkov
         uses: bridgecrewio/checkov@main
         with:
+          directory: .
           framework: ansible
           quiet: true
           skip_path: "group_vars/all/vault.yaml"
