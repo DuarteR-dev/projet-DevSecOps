@@ -1,7 +1,7 @@
 ---
 - name: Provisionnement de l'infrastructure
   hosts: hypervisors
-  become: true
+  become: false
   vars_files:
     - /home/etu/.iac_passwd.yaml
   roles:

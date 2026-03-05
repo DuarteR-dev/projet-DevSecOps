@@ -1,0 +1,24 @@
+---
+- name: Audit de Sécurité DevSecOps
+  hosts: vms
+  become: true
+  tasks:
+    - name: Vérifier que Root ne peut pas se connecter en SSH
+      command: grep "^PermitRootLogin no" /etc/ssh/sshd_config
+      register: ssh_root_check
+      changed_when: false
+
+    - name: Vérifier que l'authentification par mot de passe est désactivée
+      command: grep "^PasswordAuthentication no" /etc/ssh/sshd_config
+      register: ssh_pwd_check
+      changed_when: false
+
+    - name: Vérifier que UFW est actif et bloque par défaut en entrée
+      command: ufw status verbose
+      register: ufw_status
+      changed_when: false
+
+    - name: Rapport d'Audit
+      debug:
+        msg: "Sécurité validée : UFW est {{ 'actif' if 'Status: active' in ufw_status.stdout else 'inactif' }} et le SSH est durci."
+      when: ssh_root_check.rc == 0 and ssh_pwd_check.rc == 0

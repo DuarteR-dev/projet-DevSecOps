@@ -7,11 +7,11 @@ hypervisors:
       #   User XXXXXXXXXXXX
       #   Port 2222
       #   ForwardAgent yes
-      ansible_host: oscar
+      ansible_host: oscar6
   vars:
     ansible_ssh_user: "{{ hypervisor_user }}"
     ansible_ssh_pass: "{{ hypervisor_pass }}"
-    ansible_ssh_port: 22
+    ansible_ssh_port: 2222
 
 vms:
   hosts:

@@ -1,0 +1,10 @@
+ovs:
+  switches:
+    - name: {{ hostvars['oscar']['switches'][0].name }}
+      ports:
+{% for port in hostvars['oscar']['switches'][0].ports %}
+        - name: {{ port.name }}
+          type: {{ port.type }}
+          vlan_mode: {{ port.vlan_mode }}
+          trunks: [{{ port.trunks | join(', ') }}]
+{% endfor %}

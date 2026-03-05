@@ -1,0 +1,12 @@
+---
+- name: Test de l'interconnexion Overlay
+  hosts: vm-blue
+  tasks:
+    - name: Ping VM Verte via l'Overlay (VXLAN)
+      command: ping -c 3 192.0.2.2
+      register: ping_result
+
+    - name: Afficher le résultat du ping
+      debug:
+        msg: "L'interconnexion VXLAN est opérationnelle !"
+      when: ping_result.rc == 0

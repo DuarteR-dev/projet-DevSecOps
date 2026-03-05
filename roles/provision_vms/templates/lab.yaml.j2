@@ -1,0 +1,10 @@
+kvm:
+  vms:
+{% for host in groups['vms'] %}
+    - vm_name: {{ hostvars[host]['vm_name'] }}
+      os: linux
+      master_image: {{ hostvars[host]['master_image'] }}
+      force_copy: false
+      memory: 2048
+      tapnum: {{ hostvars[host]['tapnum'] }}
+{% endfor %}

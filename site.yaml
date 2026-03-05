@@ -22,7 +22,7 @@
 
 # --- PLAY 2 : Configuration des VMs et de l'Hyperviseur ---
 - name: Hardening & Réseau Overlay
-  hosts: all
+  hosts: vms
   become: true
   roles:
     - common_sec
