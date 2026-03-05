@@ -22,7 +22,7 @@ jobs:
         uses: ansible/ansible-lint@main
 
       - name: Run Checkov
-        uses: bridgecrewio/checkov@master
+        uses: bridgecrewio/checkov@main
         with:
           framework: ansible
           quiet: true
