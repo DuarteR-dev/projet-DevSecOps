@@ -14,19 +14,16 @@ switches:
         type: OVSPort
         vlan_mode: trunk
         trunks: [681, 683]
-      
       # VM Verte
       - name: tap242
         type: OVSPort
         vlan_mode: trunk
         trunks: [682, 683]
-      
       # VM Rouge
       - name: tap243
         type: OVSPort
         vlan_mode: trunk
         trunks: [128, 681, 682]
-      
       # - name: tap240
       #   type: OVSPort
       #   vlan_mode: access

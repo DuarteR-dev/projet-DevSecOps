@@ -1,12 +1,13 @@
 ---
-- name: apply netplan
+- name: Apply Netplan
   command: netplan apply
+  changed_when: true
 
-- name: redémarrer ssh
+- name: Redémarrer SSH
   service:
     name: ssh
     state: restarted
 
-- name: recharger ufw
-  ufw:
+- name: Recharger UFW
+  community.general.ufw:
     state: reloaded
