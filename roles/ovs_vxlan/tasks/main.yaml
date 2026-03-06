@@ -20,6 +20,6 @@
     dest: /etc/netplan/01-netcfg.yaml
     owner: root
     group: root
-    mode: '0644'
+    mode: '0600'
   when: inventory_hostname in ['vm-blue', 'vm-green']
   notify: Apply Netplan

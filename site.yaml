@@ -2,9 +2,13 @@
 # --- PLAY 1 : Préparation depuis la machine DevNet ---
 - name: Préparation et récupération des clés SSH
   hosts: localhost
-  gather_facts: false
+  gather_facts: true
   become: false
   tasks:
+    - name: Capturer l'IP de la machine DevNet
+      ansible.builtin.set_fact:
+        devnet_ip: "{{ ansible_default_ipv4.address }}"
+
     - name: Attendre que le port SSH soit ouvert sur les VMs
       wait_for:
         host: "{{ hostvars[item].ansible_host }}"

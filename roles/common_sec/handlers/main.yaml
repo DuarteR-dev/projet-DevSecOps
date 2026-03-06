@@ -1,9 +1,14 @@
 ---
 - name: Redémarrer SSH
-  service:
+  ansible.builtin.service:
     name: ssh
     state: restarted
 
 - name: Recharger UFW
   community.general.ufw:
     state: reloaded
+
+- name: Redémarrer Fail2Ban
+  ansible.builtin.service:
+    name: fail2ban
+    state: restarted

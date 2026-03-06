@@ -30,8 +30,17 @@
     --upload {{ ansible_env.HOME }}/.ssh/authorized_keys:/home/etu/.ssh/authorized_keys
     --run-command "chown -R etu:etu /home/etu/.ssh && chmod 700 /home/etu/.ssh && chmod 600 /home/etu/.ssh/authorized_keys"
   loop: "{{ groups['vms'] }}"
+  args:
+    creates: "{{ lab_path }}/.{{ hostvars[item]['vm_name'] }}_baked"
   register: baking_result
   changed_when: baking_result.rc == 0
+
+- name: Créer le fichier témoin pour virt-customize
+  ansible.builtin.file:
+    path: "{{ lab_path }}/.{{ hostvars[item]['vm_name'] }}_baked"
+    state: touch
+  loop: "{{ groups['vms'] }}"
+  when: baking_result.changed
 
 - name: Générer switch.yaml
   ansible.builtin.template:

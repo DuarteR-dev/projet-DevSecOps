@@ -4,10 +4,12 @@ network:
     enp0s1:
       dhcp4: false
       dhcp6: false
+      mtu: {{ overlay_mtu + 50 }}
   vlans:
     vlan{{ mgmt_vlan }}:
       id: {{ mgmt_vlan }}
       link: enp0s1
+      mtu: {{ overlay_mtu + 50 }}
       addresses:
         - {{ mgmt_ip_v4 }}
         - {{ mgmt_ip_v6 }}
@@ -21,6 +23,7 @@ network:
     vlan{{ vlan.id }}:
       id: {{ vlan.id }}
       link: enp0s1
+      mtu: {{ overlay_mtu + 50 }}
       addresses:
         - {{ vlan.ip }}
       routes:

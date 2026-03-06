@@ -1,0 +1,14 @@
+- name: S'assurer que Incus est installé
+  ansible.builtin.apt:
+    name: incus
+    state: present
+
+- name: Initialiser Incus (Minimal)
+  ansible.builtin.command: incus admin init --minimal
+  args:
+    creates: /var/lib/incus/cluster.crt
+
+- name: Lancer un conteneur de test sur l'Overlay OVS
+  ansible.builtin.command: "incus launch images:alpine/3.19 c1 --network {{ ovs_bridge_name }}"
+  args:
+    creates: "/var/log/incus/c1"
