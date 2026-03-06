@@ -3,7 +3,7 @@
   hosts: vm-blue
   tasks:
     - name: Ping VM Verte via l'Overlay (VXLAN)
-      command: ping -c 3 192.0.2.2
+      ansible.builtin.command: ping -c 3 192.0.2.2
       register: ping_result
       changed_when: false
 

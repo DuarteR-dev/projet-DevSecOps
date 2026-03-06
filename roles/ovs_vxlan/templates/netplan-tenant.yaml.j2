@@ -28,7 +28,7 @@ network:
       local: {{ underlay_ip }}
       id: {{ vxlan_id }}
       ttl: 255
-      mtu: {{ overlay_mtu }}
+      mtu: {{ overlay_mtu + 50 }}
 
   bridges:
     {{ ovs_bridge_name }}:
@@ -37,4 +37,4 @@ network:
       addresses:
         - {{ overlay_ip_v4 }}
         - "{{ overlay_ip_v6 }}"
-      mtu: {{ overlay_mtu }}
+      mtu: {{ overlay_mtu + 50 }}

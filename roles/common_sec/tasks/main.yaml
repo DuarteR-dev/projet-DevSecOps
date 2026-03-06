@@ -22,20 +22,21 @@
     state: present
   become: true
 
-# 3. Sécurisation de SSH
+# 3. Sécurisation de SSH via Drop-in file
 - name: Sécuriser la configuration SSH
-  lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: "{{ item.regexp }}"
-    line: "{{ item.line }}"
-  loop:
-    - { regexp: '^#?PermitRootLogin', line: 'PermitRootLogin {{ permit_root_login | default("no") }}' }
-    - { regexp: '^#?PasswordAuthentication', line: 'PasswordAuthentication {{ password_authentication | default("no") }}' }
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/99-ansible-hardening.conf
+    content: |
+      PermitRootLogin {{ permit_root_login | default('no') }}
+      PasswordAuthentication {{ password_authentication | default('no') }}
+    owner: root
+    group: root
+    mode: '0644'
   notify: Redémarrer SSH
 
 # 4. Configurer le Pare-feu (UFW)
 - name: UFW - Autoriser le routage (Forward) pour la VM Rouge
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: /etc/default/ufw
     regexp: '^DEFAULT_FORWARD_POLICY='
     line: 'DEFAULT_FORWARD_POLICY="ACCEPT"'
@@ -43,27 +44,27 @@
   notify: Recharger UFW
 
 - name: UFW - Autoriser SSH (partout)
-  ufw:
+  community.general.ufw:
     rule: allow
     port: '22'
     proto: tcp
 
 - name: UFW - Autoriser VXLAN (Uniquement pour Bleu et Vert)
-  ufw:
+  community.general.ufw:
     rule: allow
     port: '4789'
     proto: udp
   when: inventory_hostname in ['vm-blue', 'vm-green']
 
 - name: UFW - Activer le pare-feu et refuser par défaut en entrée
-  ufw:
+  community.general.ufw:
     state: enabled
     policy: deny
     direction: incoming
 
 # 5. Fail2Ban
 - name: Activer et démarrer Fail2Ban
-  service:
+  ansible.builtin.service:
     name: fail2ban
     state: started
     enabled: true

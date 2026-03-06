@@ -6,7 +6,7 @@
     mode: '0755'
 
 - name: Pré-créer les disques virtuels
-  command: >
+  ansible.builtin.command: >
     qemu-img create -f qcow2 -F qcow2 -b {{ ansible_env.HOME }}/masters/{{ hostvars[item]['master_image'] }}
     {{ lab_path }}/{{ hostvars[item]['vm_name'] }}.qcow2
   loop: "{{ groups['vms'] }}"
@@ -20,7 +20,7 @@
   loop: "{{ groups['vms'] }}"
 
 - name: Injection de Netplan et clé SSH dans les disques pré-créés
-  command: >
+  ansible.builtin.command: >
     virt-customize -a {{ lab_path }}/{{ hostvars[item]['vm_name'] }}.qcow2
     --hostname {{ hostvars[item]['vm_name'] }}
     --run-command "rm -f /etc/netplan/*.yaml"
@@ -46,12 +46,12 @@
     mode: '0644'
 
 - name: Appliquer la configuration du switch OVS
-  command: "{{ ansible_env.HOME }}/masters/scripts/switch-conf.py --apply {{ lab_path }}/switch.yaml"
+  ansible.builtin.command: "{{ ansible_env.HOME }}/masters/scripts/switch-conf.py --apply {{ lab_path }}/switch.yaml"
   register: provision_vms_switch_result
   changed_when: provision_vms_switch_result.rc == 0
 
 - name: Démarrer les VMs
-  command: "{{ ansible_env.HOME }}/masters/scripts/lab-startup.py {{ lab_path }}/lab.yaml"
+  ansible.builtin.command: "{{ ansible_env.HOME }}/masters/scripts/lab-startup.py {{ lab_path }}/lab.yaml"
   args:
     chdir: "{{ lab_path }}"
   register: provision_vms_startup_result

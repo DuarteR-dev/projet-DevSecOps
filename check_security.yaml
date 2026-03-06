@@ -3,22 +3,36 @@
   hosts: vms
   become: true
   tasks:
-    - name: Vérifier que Root ne peut pas se connecter en SSH
-      command: grep "^PermitRootLogin no" /etc/ssh/sshd_config
-      register: ssh_root_check
+    - name: Récupérer l'état des services du système
+      ansible.builtin.service_facts:
+
+    - name: Récupérer la configuration SSH effective (active)
+      ansible.builtin.command: sshd -T
+      register: sshd_config_dump
       changed_when: false
 
-    - name: Vérifier que l'authentification par mot de passe est désactivée
-      command: grep "^PasswordAuthentication no" /etc/ssh/sshd_config
-      register: ssh_pwd_check
-      changed_when: false
+    - name: Valider la désactivation de PermitRootLogin
+      ansible.builtin.assert:
+        that:
+          - "'permitrootlogin no' in sshd_config_dump.stdout"
+        success_msg: "Sécurité SSH (1/2) : Root ne peut pas se connecter."
+        fail_msg: "VULNÉRABILITÉ : PermitRootLogin n'est pas désactivé !"
 
-    - name: Vérifier que UFW est actif et bloque par défaut en entrée
-      command: ufw status verbose
-      register: ufw_status
-      changed_when: false
+    - name: Valider la désactivation de PasswordAuthentication
+      ansible.builtin.assert:
+        that:
+          - "'passwordauthentication no' in sshd_config_dump.stdout"
+        success_msg: "Sécurité SSH (2/2) : L'authentification par mot de passe est désactivée."
+        fail_msg: "VULNÉRABILITÉ : L'authentification par mot de passe est toujours active !"
+
+    - name: Vérifier que le pare-feu UFW est bien actif
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['ufw.service'] is defined
+          - ansible_facts.services['ufw.service'].state == 'running'
+        success_msg: "Sécurité Réseau : Le pare-feu UFW est bien actif et tourne."
+        fail_msg: "VULNÉRABILITÉ : Le service UFW n'est pas en cours d'exécution !"
 
     - name: Rapport d'Audit
-      debug:
-        msg: "Sécurité validée : UFW est {{ 'actif' if 'Status: active' in ufw_status.stdout else 'inactif' }} et le SSH est durci."
-      when: ssh_root_check.rc == 0 and ssh_pwd_check.rc == 0
+      ansible.builtin.debug:
+        msg: "Audit DevSecOps terminé avec succès : Les politiques de sécurité (SSH durci et UFW actif) sont appliquées et vérifiées sur {{ inventory_hostname }}."
