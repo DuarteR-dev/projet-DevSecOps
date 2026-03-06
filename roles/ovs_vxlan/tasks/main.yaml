@@ -23,3 +23,6 @@
     mode: '0600'
   when: inventory_hostname in ['vm-blue', 'vm-green']
   notify: Apply Netplan
+
+- name: Forcer l'application de Netplan avant de passer à Incus
+  ansible.builtin.meta: flush_handlers

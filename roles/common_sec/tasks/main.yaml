@@ -1,17 +1,68 @@
 ---
-# 1. Mettre à jour le système
-- name: Mettre à jour le cache apt et les paquets
+# 1. activer le routage IPv4 et IPv6 au niveau du noyau (Uniquement pour la VM Rouge)
+- name: Activer le routage IPv4 et IPv6 au niveau du noyau
+  ansible.posix.sysctl:
+    name: "{{ item }}"
+    value: '1'
+    sysctl_set: true
+    state: present
+    reload: true
+  loop:
+    - net.ipv4.ip_forward
+    - net.ipv6.conf.all.forwarding
+  when: inventory_hostname == 'vm-red'
+
+# 2. installer UFW et configurer le NAT (Masquerading) sur la VM Rouge
+- name: Installer UFW sur la VM Rouge pour le NAT
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+    update_cache: true
+  when: inventory_hostname == 'vm-red'
+
+# 3. configurer le Masquerading (NAT) sur la VM Rouge pour les sous-réseaux des tenants
+- name: UFW - Configurer le Masquerading (NAT) sur la VM Rouge
+  ansible.builtin.blockinfile:
+    path: /etc/ufw/before.rules
+    insertbefore: BOF
+    block: |
+      *nat
+      :POSTROUTING ACCEPT [0:0]
+      -A POSTROUTING -s 172.18.169.0/24 -o vlan128 -j MASQUERADE
+      -A POSTROUTING -s 172.18.170.0/24 -o vlan128 -j MASQUERADE
+      COMMIT
+  when: inventory_hostname == 'vm-red'
+  notify: Recharger UFW
+
+- name: UFW - Autoriser SSH sur la VM Rouge (prévention de blocage)
+  community.general.ufw:
+    rule: allow
+    port: "{{ ssh_port | default('22') }}"
+    proto: tcp
+  when: inventory_hostname == 'vm-red'
+
+- name: UFW - Autoriser le routage (Forward) pour la VM Rouge
+  community.general.ufw:
+    default: allow
+    direction: routed
+  when: inventory_hostname == 'vm-red'
+
+- name: UFW - Activer UFW sur la VM Rouge
+  community.general.ufw:
+    state: enabled
+  when: inventory_hostname == 'vm-red'
+
+- name: Forcer le rechargement UFW (exécute les handlers en attente)
+  ansible.builtin.meta: flush_handlers
+
+# 4. installer les outils de sécurité et de surveillance sur toutes les VMs
+- name: Mettre à jour le cache apt
   ansible.builtin.apt:
     update_cache: true
     cache_valid_time: 3600
-    upgrade: dist
-    dpkg_options: 'force-confold,force-confdef'
   become: true
-  environment:
-    DEBIAN_FRONTEND: noninteractive
 
-# 2. Installer les outils de base + Sécurité
-- name: Installer les paquets requis
+- name: Installer les paquets requis pour toutes les VMs
   ansible.builtin.apt:
     name:
       - fail2ban
@@ -22,7 +73,7 @@
     state: present
   become: true
 
-# 3. Sécurisation de SSH via Drop-in file
+# 5. Sécuriser la configuration SSH sur toutes les VMs
 - name: Sécuriser la configuration SSH
   ansible.builtin.copy:
     dest: /etc/ssh/sshd_config.d/99-ansible-hardening.conf
@@ -34,20 +85,14 @@
     mode: '0644'
   notify: Redémarrer SSH
 
-# 4. Configurer le Pare-feu (UFW)
-- name: UFW - Autoriser le routage (Forward) pour la VM Rouge
-  community.general.ufw:
-    default: allow
-    direction: routed
-  when: inventory_hostname == 'vm-red'
-  notify: Recharger UFW
-
-- name: UFW - Autoriser SSH uniquement depuis le réseau d'administration
+# 6. Configurer UFW pour autoriser le trafic nécessaire et sécuriser les accès sur toutes les VMs
+- name: UFW - Autoriser SSH depuis toutes les IP de la machine DevNet
   community.general.ufw:
     rule: allow
-      port = "{{ ssh_port | default('22') }}"
+    port: "{{ ssh_port | default('22') }}"
     proto: tcp
-    src: "{{ hostvars['localhost']['devnet_ip'] }}"
+    src: "{{ item }}"
+  loop: "{{ hostvars['localhost']['ansible_all_ipv4_addresses'] }}"
   notify: Recharger UFW
 
 - name: UFW - Autoriser VXLAN (Uniquement pour Bleu et Vert)
@@ -58,20 +103,27 @@
   when: inventory_hostname in ['vm-blue', 'vm-green']
   notify: Recharger UFW
 
+- name: UFW - Autoriser le trafic interne de l'Overlay
+  community.general.ufw:
+    rule: allow
+    src: 192.0.2.0/24
+  when: inventory_hostname in ['vm-blue', 'vm-green']
+  notify: Recharger UFW
+
 - name: UFW - Activer le pare-feu et refuser par défaut en entrée
   community.general.ufw:
     state: enabled
     policy: deny
     direction: incoming
 
-# 5. Fail2Ban
+# 7. Fail2Ban
 - name: Configurer le Jail Fail2Ban pour SSH
   ansible.builtin.copy:
     dest: /etc/fail2ban/jail.local
     content: |
       [sshd]
       enabled = true
-      port = "{{ ssh_port | default('22') }}"
+      port = {{ ssh_port | default('22') }}
       filter = sshd
       logpath = /var/log/auth.log
       maxretry = 3
@@ -86,16 +138,3 @@
     name: fail2ban
     state: started
     enabled: true
-
-# 6. Activer le routage IP (Kernel Sysctl) pour la VM Routeur
-- name: Activer le routage IPv4 et IPv6 au niveau du noyau
-  ansible.posix.sysctl:
-    name: "{{ item }}"
-    value: '1'
-    sysctl_set: true
-    state: present
-    reload: true
-  loop:
-    - net.ipv4.ip_forward
-    - net.ipv6.conf.all.forwarding
-  when: inventory_hostname == 'vm-red'

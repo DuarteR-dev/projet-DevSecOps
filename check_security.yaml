@@ -2,6 +2,8 @@
 - name: Audit de Sécurité DevSecOps
   hosts: vms
   become: true
+  vars_files:
+    - .iac_passwd.yaml
   tasks:
     - name: Récupérer l'état des services du système
       ansible.builtin.service_facts:

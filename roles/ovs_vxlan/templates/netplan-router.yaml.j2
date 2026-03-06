@@ -31,9 +31,17 @@ network:
           via: {{ mgmt_gw }}
           table: {{ vlan.table }}
       routing-policy:
+        - to: 10.0.0.0/8
+          table: 254
+          priority: 10
+        - to: 172.18.0.0/16
+          table: 254
+          priority: 15
         - from: {{ vlan.network }}
           table: {{ vlan.table }}
+          priority: 20
         - mark: {{ vlan.mark }}
           from: 0.0.0.0/0
           table: {{ vlan.table }}
+          priority: 30
 {% endfor %}

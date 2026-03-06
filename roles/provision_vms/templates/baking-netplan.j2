@@ -16,6 +16,15 @@ network:
           via: {{ hostvars[item]['mgmt_gw'] }}
       nameservers:
         addresses: [1.1.1.1, 8.8.8.8]
+{% if hostvars[item]['tenant_vlans'] is defined %}
+{% for vlan in hostvars[item]['tenant_vlans'] %}
+    vlan{{ vlan.id }}:
+      id: {{ vlan.id }}
+      link: enp0s1
+      addresses:
+        - {{ vlan.ip }}
+{% endfor %}
+{% endif %}
 {% else %}
     vlan{{ hostvars[item]['underlay_vlan'] }}:
       id: {{ hostvars[item]['underlay_vlan'] }}

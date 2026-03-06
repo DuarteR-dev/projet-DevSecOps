@@ -1,3 +1,4 @@
+---
 - name: S'assurer que Incus est installé
   ansible.builtin.apt:
     name: incus
@@ -7,8 +8,10 @@
   ansible.builtin.command: incus admin init --minimal
   args:
     creates: /var/lib/incus/cluster.crt
+  when: inventory_hostname in ['vm-blue', 'vm-green']
 
 - name: Lancer un conteneur de test sur l'Overlay OVS
-  ansible.builtin.command: "incus launch images:alpine/3.19 c1 --network {{ ovs_bridge_name }}"
+  ansible.builtin.command: "incus launch images:alpine/edge c1 --network {{ ovs_bridge_name }}"
   args:
     creates: "/var/log/incus/c1"
+  when: inventory_hostname in ['vm-blue', 'vm-green']
