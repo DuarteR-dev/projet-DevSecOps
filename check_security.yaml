@@ -39,7 +39,23 @@
         success_msg: "Sécurité Réseau : Le pare-feu UFW est bien actif et filtre le trafic."
         fail_msg: "VULNÉRABILITÉ : Le pare-feu UFW n'est pas actif !"
 
-    - name: Rapport d'Audit
+    - name: Installer Lynis pour l'audit de vulnérabilité
+      ansible.builtin.apt:
+        name: lynis
+        state: present
+        update_cache: yes
+
+    - name: Lancer le scan Lynis (Audit du système)
+      ansible.builtin.command: lynis audit system --quick
+      register: lynis_result
+      changed_when: false
+      failed_when: false
+
+    - name: Afficher le score d'audit Lynis (Hardening index)
+      ansible.builtin.debug:
+        msg: "{{ lynis_result.stdout_lines | select('search', 'Hardening index') | list }}"
+
+    - name: Rapport d'Audit Global
       ansible.builtin.debug:
         msg: >
           "Audit DevSecOps terminé avec succès :

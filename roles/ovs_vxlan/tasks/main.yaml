@@ -4,6 +4,12 @@
     name: openvswitch-switch
     state: present
 
+- name: S'assurer que systemd-networkd est activé et démarré (requis par netplan)
+  ansible.builtin.service:
+    name: systemd-networkd
+    state: started
+    enabled: true
+
 - name: Générer la configuration Netplan pour le routeur (Rouge)
   ansible.builtin.template:
     src: netplan-router.yaml.j2

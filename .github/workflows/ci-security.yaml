@@ -13,29 +13,35 @@ jobs:
       - name: Checkout du code
         uses: actions/checkout@v4
 
-      - name: Créer un faux fichier vault
-        run: |
-          sed -i '/vault_password_file/d' ansible.cfg
-          sudo mkdir -p /home/etu
-          sudo touch /home/etu/.vault_pass.txt
+      - name: Secret Scanning (Gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Installation de Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
+          cache: 'pip'
 
-      - name: Installer les dépendances Ansible
-        run: |
-          pip install ansible-core
+      - name: Installer les dépendances Python et Ansible
+        run: >
+          pip install -r requirements.txt
+          pip install ansible-lint
           ansible-galaxy collection install -r requirements.yaml
 
-      - name: Run Ansible Lint
-        uses: ansible/ansible-lint@main
+      - name: Créer les fichiers secrets factices pour la CI
+        run: >
+          touch .vault_pass.txt
+          touch .iac_passwd.yaml
 
-      - name: Run Checkov
+      - name: Run Ansible Lint
+        run: ansible-lint -c .ansible-lint
+
+      - name: Run Checkov (SAST IaC)
         uses: bridgecrewio/checkov-action@master
         with:
           directory: .
           framework: ansible
           quiet: true
-          skip_path: "group_vars/all/vault.yaml"
+          skip_path: ".iac_passwd.yaml"

@@ -10,8 +10,17 @@
     creates: /var/lib/incus/cluster.crt
   when: inventory_hostname in ['vm-blue', 'vm-green']
 
+- name: Configurer le profil Incus par défaut pour utiliser le bridge OVS
+  ansible.builtin.command: "incus profile device add default eth0 nic nictype=bridged parent={{ ovs_bridge_name }}"
+  register: incus_profile_result
+  failed_when: 
+    - incus_profile_result.rc != 0
+    - "'Device already exists' not in incus_profile_result.stderr"
+  changed_when: "'Device already exists' not in incus_profile_result.stderr"
+  when: inventory_hostname in ['vm-blue', 'vm-green']
+
 - name: Lancer un conteneur de test sur l'Overlay OVS
-  ansible.builtin.command: "incus launch images:alpine/edge c1 --network {{ ovs_bridge_name }}"
+  ansible.builtin.command: "incus launch images:alpine/edge c1"
   args:
     creates: "/var/log/incus/c1"
   when: inventory_hostname in ['vm-blue', 'vm-green']

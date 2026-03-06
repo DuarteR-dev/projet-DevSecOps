@@ -1,5 +1,5 @@
 ---
-# 1. activer le routage IPv4 et IPv6 au niveau du noyau (Uniquement pour la VM Rouge)
+# 1. activer le routage IPv4 et IPv6 au niveau du noyau (uniquement pour la VM Rouge)
 - name: Activer le routage IPv4 et IPv6 au niveau du noyau
   ansible.posix.sysctl:
     name: "{{ item }}"
@@ -20,16 +20,25 @@
     update_cache: true
   when: inventory_hostname == 'vm-red'
 
-# 3. configurer le Masquerading (NAT) sur la VM Rouge pour les sous-réseaux des tenants
-- name: UFW - Configurer le Masquerading (NAT) sur la VM Rouge
+# 3. configurer le Masquerading (NAT) et le NOTRACK (Overlay) sur la VM Rouge
+- name: UFW - Configurer le Masquerading (NAT) et le NOTRACK sur la VM Rouge
   ansible.builtin.blockinfile:
     path: /etc/ufw/before.rules
     insertbefore: BOF
-    block: |
+    block: >
+      *raw
+      :PREROUTING ACCEPT [0:0]
+      :OUTPUT ACCEPT [0:0]
+      -A PREROUTING -s 192.0.2.0/24 -j NOTRACK
+      -A PREROUTING -d 192.0.2.0/24 -j NOTRACK
+      -A OUTPUT -s 192.0.2.0/24 -j NOTRACK
+      -A OUTPUT -d 192.0.2.0/24 -j NOTRACK
+      COMMIT
       *nat
       :POSTROUTING ACCEPT [0:0]
       -A POSTROUTING -s 172.18.169.0/24 -o vlan128 -j MASQUERADE
       -A POSTROUTING -s 172.18.170.0/24 -o vlan128 -j MASQUERADE
+      -A POSTROUTING -s 192.0.2.0/24 -o vlan128 -j MASQUERADE
       COMMIT
   when: inventory_hostname == 'vm-red'
   notify: Recharger UFW
@@ -65,7 +74,6 @@
 - name: Installer les paquets requis pour toutes les VMs
   ansible.builtin.apt:
     name:
-      - fail2ban
       - ufw
       - tcpdump
       - vim
@@ -77,7 +85,7 @@
 - name: Sécuriser la configuration SSH
   ansible.builtin.copy:
     dest: /etc/ssh/sshd_config.d/99-ansible-hardening.conf
-    content: |
+    content: >
       PermitRootLogin {{ permit_root_login | default('no') }}
       PasswordAuthentication {{ password_authentication | default('no') }}
     owner: root
@@ -86,13 +94,12 @@
   notify: Redémarrer SSH
 
 # 6. Configurer UFW pour autoriser le trafic nécessaire et sécuriser les accès sur toutes les VMs
-- name: UFW - Autoriser SSH depuis toutes les IP de la machine DevNet
+- name: UFW - Autoriser SSH depuis la machine DevNet uniquement (Moindre privilège)
   community.general.ufw:
     rule: allow
     port: "{{ ssh_port | default('22') }}"
     proto: tcp
-    src: "{{ item }}"
-  loop: "{{ hostvars['localhost']['ansible_all_ipv4_addresses'] }}"
+    src: "{{ hostvars['localhost']['devnet_ip'] }}"
   notify: Recharger UFW
 
 - name: UFW - Autoriser le trafic Underlay (inclut VXLAN natif sur 4789/8472)
@@ -114,26 +121,3 @@
     state: enabled
     policy: deny
     direction: incoming
-
-# 7. Fail2Ban
-- name: Configurer le Jail Fail2Ban pour SSH
-  ansible.builtin.copy:
-    dest: /etc/fail2ban/jail.local
-    content: |
-      [sshd]
-      enabled = true
-      port = {{ ssh_port | default('22') }}
-      filter = sshd
-      logpath = /var/log/auth.log
-      maxretry = 3
-      bantime = 3600
-    owner: root
-    group: root
-    mode: '0644'
-  notify: Redémarrer Fail2Ban
-
-- name: Activer et démarrer Fail2Ban
-  ansible.builtin.service:
-    name: fail2ban
-    state: started
-    enabled: true
