@@ -45,7 +45,7 @@
 - name: UFW - Autoriser SSH uniquement depuis le réseau d'administration
   community.general.ufw:
     rule: allow
-    port = {{ ssh_port | default('22') }}
+      port = "{{ ssh_port | default('22') }}"
     proto: tcp
     src: "{{ hostvars['localhost']['devnet_ip'] }}"
   notify: Recharger UFW
@@ -71,7 +71,7 @@
     content: |
       [sshd]
       enabled = true
-      port = {{ ssh_port | default('22') }}
+      port = "{{ ssh_port | default('22') }}"
       filter = sshd
       logpath = /var/log/auth.log
       maxretry = 3
