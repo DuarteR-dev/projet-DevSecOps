@@ -30,7 +30,7 @@
   hosts: vms
   become: true
   vars_files:
-    - /home/etu/.iac_passwd.yaml
+    - .iac_passwd.yaml
   roles:
     - common_sec
     - ovs_vxlan

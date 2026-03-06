@@ -6,6 +6,6 @@ common_packages:
   - net-tools
   - bridge-utils
 
-ssh_port: 2222
+ssh_port: 22
 permit_root_login: "no"
 password_authentication: "no"

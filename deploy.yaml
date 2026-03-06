@@ -3,7 +3,7 @@
   hosts: hypervisors
   become: false
   vars_files:
-    - /home/etu/.iac_passwd.yaml
+    - .iac_passwd.yaml
   roles:
     - provision_vms
 

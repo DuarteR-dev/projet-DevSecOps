@@ -33,7 +33,6 @@
   args:
     creates: "{{ lab_path }}/.{{ hostvars[item]['vm_name'] }}_baked"
   register: baking_result
-  changed_when: baking_result.rc == 0
 
 - name: Créer le fichier témoin pour virt-customize
   ansible.builtin.file:
@@ -64,5 +63,4 @@
   args:
     chdir: "{{ lab_path }}"
   register: provision_vms_startup_result
-  changed_when: provision_vms_startup_result.rc == 0
-  
+  changed_when: true
