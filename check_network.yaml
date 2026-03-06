@@ -8,6 +8,6 @@
       changed_when: false
 
     - name: Afficher le résultat du ping
-      debug:
+      ansible.builtin.debug:
         msg: "L'interconnexion VXLAN est opérationnelle !"
       when: ping_result.rc == 0

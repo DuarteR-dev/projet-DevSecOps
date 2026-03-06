@@ -35,4 +35,7 @@
 
     - name: Rapport d'Audit
       ansible.builtin.debug:
-        msg: "Audit DevSecOps terminé avec succès : Les politiques de sécurité (SSH durci et UFW actif) sont appliquées et vérifiées sur {{ inventory_hostname }}."
+        msg: >
+          "Audit DevSecOps terminé avec succès : 
+          Les politiques de sécurité (SSH durci et UFW actif) 
+          sont appliquées et vérifiées sur {{ inventory_hostname }}."

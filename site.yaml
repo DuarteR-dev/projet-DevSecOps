@@ -10,7 +10,7 @@
         devnet_ip: "{{ ansible_default_ipv4.address }}"
 
     - name: Attendre que le port SSH soit ouvert sur les VMs
-      wait_for:
+      ansible.builtin.wait_for:
         host: "{{ hostvars[item].ansible_host }}"
         port: 22
         state: started
@@ -19,7 +19,7 @@
       loop: "{{ groups['vms'] }}"
 
     - name: Scanner et ajouter les empreintes SSH aux known_hosts
-      known_hosts:
+      ansible.builtin.known_hosts:
         name: "{{ hostvars[item].ansible_host }}"
         key: "{{ lookup('pipe', 'ssh-keyscan -H -t ed25519 ' + hostvars[item].ansible_host) }}"
         state: present

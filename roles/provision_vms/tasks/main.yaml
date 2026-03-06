@@ -1,6 +1,6 @@
 ---
 - name: Créer le répertoire du projet sur l'hyperviseur
-  file:
+  ansible.builtin.file:
     path: "{{ lab_path }}"
     state: directory
     mode: '0755'
@@ -17,6 +17,7 @@
   ansible.builtin.template:
     src: baking-netplan.j2
     dest: "{{ lab_path }}/{{ item }}-netplan.yaml"
+    mode: '0600'
   loop: "{{ groups['vms'] }}"
 
 - name: Injection de Netplan et clé SSH dans les disques pré-créés
@@ -32,14 +33,8 @@
   loop: "{{ groups['vms'] }}"
   args:
     creates: "{{ lab_path }}/.{{ hostvars[item]['vm_name'] }}_baked"
-  register: baking_result
-
-- name: Créer le fichier témoin pour virt-customize
-  ansible.builtin.file:
-    path: "{{ lab_path }}/.{{ hostvars[item]['vm_name'] }}_baked"
-    state: touch
-  loop: "{{ groups['vms'] }}"
-  when: baking_result.changed
+  register: provision_vms_baking_result
+  notify: Créer témoin
 
 - name: Générer switch.yaml
   ansible.builtin.template:
