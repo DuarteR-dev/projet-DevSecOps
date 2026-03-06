@@ -25,13 +25,13 @@ jobs:
           cache: 'pip'
 
       - name: Installer les dépendances Python et Ansible
-        run: >
+        run: |
           pip install -r requirements.txt
           pip install ansible-lint
           ansible-galaxy collection install -r requirements.yaml
 
       - name: Créer les fichiers secrets factices pour la CI
-        run: >
+        run: |
           touch .vault_pass.txt
           touch .iac_passwd.yaml
 

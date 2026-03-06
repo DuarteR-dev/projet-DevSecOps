@@ -25,7 +25,7 @@
   ansible.builtin.blockinfile:
     path: /etc/ufw/before.rules
     insertbefore: BOF
-    block: >
+    block: |
       *raw
       :PREROUTING ACCEPT [0:0]
       :OUTPUT ACCEPT [0:0]
@@ -85,7 +85,7 @@
 - name: Sécuriser la configuration SSH
   ansible.builtin.copy:
     dest: /etc/ssh/sshd_config.d/99-ansible-hardening.conf
-    content: >
+    content: |
       PermitRootLogin {{ permit_root_login | default('no') }}
       PasswordAuthentication {{ password_authentication | default('no') }}
     owner: root
