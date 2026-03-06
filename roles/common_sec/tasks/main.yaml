@@ -1,5 +1,5 @@
 ---
-# 1. activer le routage IPv4 et IPv6 au niveau du noyau (uniquement pour la VM Rouge)
+# 1. activer le routage IPv4 et IPv6 au niveau du noyau sur TOUTES les VMs
 - name: Activer le routage IPv4 et IPv6 au niveau du noyau
   ansible.posix.sysctl:
     name: "{{ item }}"
@@ -10,7 +10,7 @@
   loop:
     - net.ipv4.ip_forward
     - net.ipv6.conf.all.forwarding
-  when: inventory_hostname == 'vm-red'
+  when: inventory_hostname in ['vm-red', 'vm-blue', 'vm-green']
 
 # 2. installer UFW et configurer le NAT (Masquerading) sur la VM Rouge
 - name: Installer UFW sur la VM Rouge pour le NAT
@@ -20,8 +20,22 @@
     update_cache: true
   when: inventory_hostname == 'vm-red'
 
-# 3. configurer le Masquerading (NAT) et le NOTRACK (Overlay) sur la VM Rouge
-- name: UFW - Configurer le Masquerading (NAT) et le NOTRACK sur la VM Rouge
+# 3. configurer le Masquerading (NAT) sur la VM Rouge
+- name: UFW - Configurer le Masquerading (NAT) sur la VM Rouge
+  ansible.builtin.blockinfile:
+    path: /etc/ufw/before.rules
+    insertbefore: BOF
+    block: |
+      *nat
+      :POSTROUTING ACCEPT [0:0]
+      -A POSTROUTING -s 172.18.169.0/24 -o vlan128 -j MASQUERADE
+      -A POSTROUTING -s 172.18.170.0/24 -o vlan128 -j MASQUERADE
+      -A POSTROUTING -s 192.0.2.0/24 -o vlan128 -j MASQUERADE
+      COMMIT
+  when: inventory_hostname == 'vm-red'
+  notify: Recharger UFW
+
+- name: UFW - Configurer le NOTRACK (Overlay) sur VMs Bleue et Verte
   ansible.builtin.blockinfile:
     path: /etc/ufw/before.rules
     insertbefore: BOF
@@ -34,13 +48,7 @@
       -A OUTPUT -s 192.0.2.0/24 -j NOTRACK
       -A OUTPUT -d 192.0.2.0/24 -j NOTRACK
       COMMIT
-      *nat
-      :POSTROUTING ACCEPT [0:0]
-      -A POSTROUTING -s 172.18.169.0/24 -o vlan128 -j MASQUERADE
-      -A POSTROUTING -s 172.18.170.0/24 -o vlan128 -j MASQUERADE
-      -A POSTROUTING -s 192.0.2.0/24 -o vlan128 -j MASQUERADE
-      COMMIT
-  when: inventory_hostname == 'vm-red'
+  when: inventory_hostname in ['vm-blue', 'vm-green']
   notify: Recharger UFW
 
 - name: UFW - Autoriser SSH sur la VM Rouge (prévention de blocage)
@@ -50,11 +58,10 @@
     proto: tcp
   when: inventory_hostname == 'vm-red'
 
-- name: UFW - Autoriser le routage (Forward) pour la VM Rouge
+- name: UFW - Autoriser le routage (Forward) pour TOUTES les VMs
   community.general.ufw:
     default: allow
     direction: routed
-  when: inventory_hostname == 'vm-red'
 
 - name: UFW - Activer UFW sur la VM Rouge
   community.general.ufw:

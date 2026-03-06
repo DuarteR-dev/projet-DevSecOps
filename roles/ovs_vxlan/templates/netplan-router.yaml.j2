@@ -30,6 +30,10 @@ network:
         - to: default
           via: {{ mgmt_gw }}
           table: {{ vlan.table }}
+{% if vlan.id == 681 %}
+        - to: 192.0.2.0/24
+          via: 172.18.169.10
+{% endif %}
       routing-policy:
         - to: 10.0.0.0/8
           table: 254

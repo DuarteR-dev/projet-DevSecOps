@@ -10,17 +10,57 @@
     creates: /var/lib/incus/cluster.crt
   when: inventory_hostname in ['vm-blue', 'vm-green']
 
-- name: Configurer le profil Incus par défaut pour utiliser le bridge OVS
-  ansible.builtin.command: "incus profile device add default eth0 nic nictype=bridged parent={{ ovs_bridge_name }}"
-  register: incus_profile_result
-  failed_when: 
-    - incus_profile_result.rc != 0
-    - "'Device already exists' not in incus_profile_result.stderr"
-  changed_when: "'Device already exists' not in incus_profile_result.stderr"
+- name: Attacher le profil par défaut au bridge OVS (Remplacement)
+  ansible.builtin.command: "incus profile device set default eth0 parent {{ ovs_bridge_name }}"
+  register: incus_profile_set
+  changed_when: incus_profile_set.rc == 0
+  failed_when: false
   when: inventory_hostname in ['vm-blue', 'vm-green']
 
-- name: Lancer un conteneur de test sur l'Overlay OVS
-  ansible.builtin.command: "incus launch images:alpine/edge c1"
-  args:
-    creates: "/var/log/incus/c1"
+- name: Nettoyer l'ancien conteneur de test c1 (s'il existe)
+  ansible.builtin.command: "incus delete -f c1"
+  failed_when: false
+  changed_when: false
   when: inventory_hostname in ['vm-blue', 'vm-green']
+
+- name: Définir la topologie des conteneurs pour la VM Bleue
+  ansible.builtin.set_fact:
+    my_containers:
+      - { name: 'blueC0', ip: '192.0.2.60' }
+      - { name: 'blueC1', ip: '192.0.2.53' }
+      - { name: 'blueC2', ip: '192.0.2.59' }
+      - { name: 'blueDHCP', ip: '192.0.2.250' }
+  when: inventory_hostname == 'vm-blue'
+
+- name: Définir la topologie des conteneurs pour la VM Verte
+  ansible.builtin.set_fact:
+    my_containers:
+      - { name: 'greenC0', ip: '192.0.2.19' }
+      - { name: 'greenC1', ip: '192.0.2.20' }
+      - { name: 'greenDHCP', ip: '192.0.2.251' }
+  when: inventory_hostname == 'vm-green'
+
+- name: Lancer les conteneurs requis par le lab
+  ansible.builtin.command: "incus launch images:alpine/edge {{ item.name }}"
+  args:
+    creates: "/var/log/incus/{{ item.name }}"
+  loop: "{{ my_containers }}"
+  when: inventory_hostname in ['vm-blue', 'vm-green']
+
+- name: Configurer les IPs statiques et le DNS dans les conteneurs (Simulation IPAM)
+  ansible.builtin.shell: |
+    incus exec {{ item.name }} -- sh -c "cat <<EOF > /etc/network/interfaces
+    auto lo
+    iface lo inet loopback
+
+    auto eth0
+    iface eth0 inet static
+        address {{ item.ip }}
+        netmask 255.255.255.0
+        gateway 192.0.2.{{ '1' if inventory_hostname == 'vm-blue' else '2' }}
+    EOF"
+    incus exec {{ item.name }} -- sh -c "echo 'nameserver 8.8.8.8' > /etc/resolv.conf"
+    incus exec {{ item.name }} -- sh -c "ip addr flush dev eth0; ifup eth0"
+  loop: "{{ my_containers }}"
+  when: inventory_hostname in ['vm-blue', 'vm-green']
+  changed_when: true

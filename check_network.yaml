@@ -1,15 +1,29 @@
 ---
-- name: Test de l'interconnexion Overlay
+- name: Test de l'interconnexion Overlay et du Routage
   hosts: vm-blue
+  become: true
   vars_files:
     - .iac_passwd.yaml
   tasks:
-    - name: Ping VM Verte via l'Overlay (VXLAN)
+    - name: 1. Ping VM Verte via l'Overlay (Test du tunnel OVS/VXLAN)
       ansible.builtin.command: ping -c 3 192.0.2.2
-      register: ping_result
+      register: ping_vxlan
       changed_when: false
 
-    - name: Afficher le résultat du ping
+    - name: 2. Ping interne depuis blueC0 vers greenC0 (Traversée du VXLAN)
+      ansible.builtin.command: incus exec blueC0 -- ping -c 3 192.0.2.19
+      register: ping_incus_overlay
+      changed_when: false
+
+    - name: 3. Ping Internet depuis blueC0 (Test NAT et Routage asymétrique)
+      ansible.builtin.command: incus exec blueC0 -- ping -c 3 8.8.8.8
+      register: ping_incus_internet
+      changed_when: false
+
+    - name: Afficher le bilan des tests réseau
       ansible.builtin.debug:
-        msg: "L'interconnexion VXLAN est opérationnelle !"
-      when: ping_result.rc == 0
+        msg: |
+          "Tous les tests réseau sont validés avec succès :
+           - Le tunnel VXLAN fonctionne (Underlay OVS).
+           - Les conteneurs communiquent sur l'Overlay entre les sites.
+           - Les conteneurs ont accès à Internet (NAT et NOTRACK OK)."
