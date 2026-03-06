@@ -71,7 +71,7 @@
     content: |
       [sshd]
       enabled = true
-      port = {{ ssh_port | default({{ ssh_port }}) }}
+      port = {{ ssh_port | default('22') }}
       filter = sshd
       logpath = /var/log/auth.log
       maxretry = 3
