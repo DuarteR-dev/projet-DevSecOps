@@ -28,7 +28,7 @@ network:
       local: {{ underlay_ip }}
       id: {{ vxlan_id }}
       ttl: 255
-      mtu: 9000
+      mtu: {{ overlay_mtu }}
 
   bridges:
     {{ ovs_bridge_name }}:

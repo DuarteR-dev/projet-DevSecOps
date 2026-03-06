@@ -14,7 +14,7 @@
     creates: "{{ lab_path }}/{{ hostvars[item]['vm_name'] }}.qcow2"
 
 - name: Générer le Netplan
-  template:
+  ansible.builtin.template:
     src: baking-netplan.j2
     dest: "{{ lab_path }}/{{ item }}-netplan.yaml"
   loop: "{{ groups['vms'] }}"
@@ -34,13 +34,13 @@
   changed_when: baking_result.rc == 0
 
 - name: Générer switch.yaml
-  template:
+  ansible.builtin.template:
     src: switch.yaml.j2
     dest: "{{ lab_path }}/switch.yaml"
     mode: '0644'
 
 - name: Générer lab.yaml
-  template:
+  ansible.builtin.template:
     src: lab.yaml.j2
     dest: "{{ lab_path }}/lab.yaml"
     mode: '0644'

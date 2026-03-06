@@ -1,7 +1,7 @@
 ---
 # 1. Mettre à jour le système
 - name: Mettre à jour le cache apt et les paquets
-  apt:
+  ansible.builtin.apt:
     update_cache: true
     cache_valid_time: 3600
     upgrade: dist
@@ -12,7 +12,7 @@
 
 # 2. Installer les outils de base + Sécurité
 - name: Installer les paquets requis
-  apt:
+  ansible.builtin.apt:
     name:
       - fail2ban
       - ufw
@@ -31,7 +31,7 @@
   loop:
     - { regexp: '^#?PermitRootLogin', line: 'PermitRootLogin {{ permit_root_login | default("no") }}' }
     - { regexp: '^#?PasswordAuthentication', line: 'PasswordAuthentication {{ password_authentication | default("no") }}' }
-  notify: redémarrer ssh
+  notify: Redémarrer SSH
 
 # 4. Configurer le Pare-feu (UFW)
 - name: UFW - Autoriser le routage (Forward) pour la VM Rouge
@@ -40,7 +40,7 @@
     regexp: '^DEFAULT_FORWARD_POLICY='
     line: 'DEFAULT_FORWARD_POLICY="ACCEPT"'
   when: inventory_hostname == 'vm-red'
-  notify: recharger ufw
+  notify: Recharger UFW
 
 - name: UFW - Autoriser SSH (partout)
   ufw:

@@ -1,25 +1,25 @@
 ---
 - name: S'assurer que le paquet openvswitch-switch est installé
-  apt:
+  ansible.builtin.apt:
     name: openvswitch-switch
     state: present
 
 - name: Générer la configuration Netplan pour le routeur (Rouge)
-  template:
+  ansible.builtin.template:
     src: netplan-router.yaml.j2
     dest: /etc/netplan/01-netcfg.yaml
     owner: root
     group: root
     mode: '0644'
   when: inventory_hostname == 'vm-red'
-  notify: apply netplan
+  notify: Apply Netplan
 
 - name: Générer la configuration Netplan pour les tenants (Bleu/Vert)
-  template:
+  ansible.builtin.template:
     src: netplan-tenant.yaml.j2
     dest: /etc/netplan/01-netcfg.yaml
     owner: root
     group: root
     mode: '0644'
   when: inventory_hostname in ['vm-blue', 'vm-green']
-  notify: apply netplan
+  notify: Apply Netplan
