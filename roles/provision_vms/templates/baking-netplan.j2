@@ -1,0 +1,30 @@
+network:
+  version: 2
+  ethernets:
+    enp0s1:
+      dhcp4: false
+      dhcp6: false
+  vlans:
+{% if hostvars[item]['mgmt_vlan'] is defined %}
+    vlan{{ hostvars[item]['mgmt_vlan'] }}:
+      id: {{ hostvars[item]['mgmt_vlan'] }}
+      link: enp0s1
+      addresses:
+        - {{ hostvars[item]['mgmt_ip_v4'] }}
+      routes:
+        - to: default
+          via: {{ hostvars[item]['mgmt_gw'] }}
+      nameservers:
+        addresses: [1.1.1.1, 8.8.8.8]
+{% else %}
+    vlan{{ hostvars[item]['underlay_vlan'] }}:
+      id: {{ hostvars[item]['underlay_vlan'] }}
+      link: enp0s1
+      addresses:
+        - {{ hostvars[item]['underlay_ip'] }}/{{ hostvars[item]['underlay_cidr'] }}
+      routes:
+        - to: default
+          via: {{ hostvars[item]['underlay_gw'] }}
+      nameservers:
+        addresses: [1.1.1.1, 8.8.8.8]
+{% endif %}

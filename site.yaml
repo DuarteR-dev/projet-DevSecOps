@@ -3,6 +3,7 @@
 - name: Préparation et récupération des clés SSH
   hosts: localhost
   gather_facts: false
+  become: false
   tasks:
     - name: Attendre que le port SSH soit ouvert sur les VMs
       wait_for:
@@ -10,7 +11,7 @@
         port: 22
         state: started
         delay: 10
-        timeout: 300
+        timeout: 60
       loop: "{{ groups['vms'] }}"
 
     - name: Scanner et ajouter les empreintes SSH aux known_hosts
@@ -20,10 +21,12 @@
         state: present
       loop: "{{ groups['vms'] }}"
 
-# --- PLAY 2 : Configuration des VMs et de l'Hyperviseur ---
+# --- PLAY 2 : Configuration des VMs  ---
 - name: Hardening & Réseau Overlay
   hosts: vms
   become: true
+  vars_files:
+    - /home/etu/.iac_passwd.yaml
   roles:
     - common_sec
     - ovs_vxlan

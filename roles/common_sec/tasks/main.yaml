@@ -4,6 +4,11 @@
   apt:
     update_cache: true
     cache_valid_time: 3600
+    upgrade: dist
+    dpkg_options: 'force-confold,force-confdef'
+  become: true
+  environment:
+    DEBIAN_FRONTEND: noninteractive
 
 # 2. Installer les outils de base + Sécurité
 - name: Installer les paquets requis
@@ -15,6 +20,7 @@
       - vim
       - curl
     state: present
+  become: true
 
 # 3. Sécurisation de SSH
 - name: Sécuriser la configuration SSH

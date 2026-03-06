@@ -5,13 +5,41 @@
     state: directory
     mode: '0755'
 
-- name: Générer le fichier de configuration du switch (switch.yaml)
+- name: Pré-créer les disques virtuels
+  command: >
+    qemu-img create -f qcow2 -F qcow2 -b {{ ansible_env.HOME }}/masters/{{ hostvars[item]['master_image'] }}
+    {{ lab_path }}/{{ hostvars[item]['vm_name'] }}.qcow2
+  loop: "{{ groups['vms'] }}"
+  args:
+    creates: "{{ lab_path }}/{{ hostvars[item]['vm_name'] }}.qcow2"
+
+- name: Générer le Netplan
+  template:
+    src: baking-netplan.j2
+    dest: "{{ lab_path }}/{{ item }}-netplan.yaml"
+  loop: "{{ groups['vms'] }}"
+
+- name: Injection de Netplan et clé SSH dans les disques pré-créés
+  command: >
+    virt-customize -a {{ lab_path }}/{{ hostvars[item]['vm_name'] }}.qcow2
+    --hostname {{ hostvars[item]['vm_name'] }}
+    --run-command "rm -f /etc/netplan/*.yaml"
+    --upload {{ lab_path }}/{{ item }}-netplan.yaml:/etc/netplan/01-netcfg.yaml
+    --run-command "chmod 600 /etc/netplan/01-netcfg.yaml"
+    --mkdir /home/etu/.ssh
+    --upload {{ ansible_env.HOME }}/.ssh/authorized_keys:/home/etu/.ssh/authorized_keys
+    --run-command "chown -R etu:etu /home/etu/.ssh && chmod 700 /home/etu/.ssh && chmod 600 /home/etu/.ssh/authorized_keys"
+  loop: "{{ groups['vms'] }}"
+  register: baking_result
+  changed_when: baking_result.rc == 0
+
+- name: Générer switch.yaml
   template:
     src: switch.yaml.j2
     dest: "{{ lab_path }}/switch.yaml"
     mode: '0644'
 
-- name: Générer le fichier de définition des VMs (lab.yaml)
+- name: Générer lab.yaml
   template:
     src: lab.yaml.j2
     dest: "{{ lab_path }}/lab.yaml"
@@ -22,7 +50,10 @@
   register: provision_vms_switch_result
   changed_when: provision_vms_switch_result.rc == 0
 
-- name: Démarrer les VMs du lab via le script académique
+- name: Démarrer les VMs
   command: "{{ ansible_env.HOME }}/masters/scripts/lab-startup.py {{ lab_path }}/lab.yaml"
+  args:
+    chdir: "{{ lab_path }}"
   register: provision_vms_startup_result
   changed_when: provision_vms_startup_result.rc == 0
+  
