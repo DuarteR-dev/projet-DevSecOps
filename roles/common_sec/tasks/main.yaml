@@ -56,24 +56,27 @@
 - name: Forcer le rechargement UFW (exécute les handlers en attente)
   ansible.builtin.meta: flush_handlers
 
-# 4. installer les outils de sécurité et de surveillance sur toutes les VMs
-- name: Mettre à jour le cache apt
-  ansible.builtin.apt:
-    update_cache: true
-    cache_valid_time: 3600
-  become: true
-
-- name: Installer les paquets requis pour toutes les VMs
+# 4. Optimisation IaC : Installation des outils, de ethtool et MAJ du cache en une seule tâche
+- name: Installer les paquets requis (et mettre à jour le cache)
   ansible.builtin.apt:
     name:
       - ufw
       - tcpdump
       - vim
       - curl
+      - ethtool
     state: present
-  become: true
+    update_cache: true
+    cache_valid_time: 3600
 
-# 5. Sécuriser la configuration SSH sur toutes les VMs
+# 5. La solution DevSecOps élégante pour le bug VXLAN (Remplace le script manuel)
+- name: Créer une règle udev pour désactiver l'offloading TX sur les veth
+  ansible.builtin.copy:
+    dest: /etc/udev/rules.d/99-veth-offload.rules
+    content: 'ACTION=="add", SUBSYSTEM=="net", KERNEL=="veth*", RUN+="/sbin/ethtool -K $name tx off"\n'
+  notify: Recharger les règles udev
+
+# 6. Sécuriser la configuration SSH sur toutes les VMs
 - name: Sécuriser la configuration SSH
   ansible.builtin.copy:
     dest: /etc/ssh/sshd_config.d/99-ansible-hardening.conf
@@ -85,7 +88,7 @@
     mode: '0644'
   notify: Redémarrer SSH
 
-# 6. Configurer UFW pour autoriser le trafic nécessaire et sécuriser les accès sur toutes les VMs
+# 7. Configurer UFW pour autoriser le trafic nécessaire et sécuriser les accès sur toutes les VMs
 - name: UFW - Autoriser SSH depuis toutes les IP de la machine DevNet
   community.general.ufw:
     rule: allow

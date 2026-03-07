@@ -4,19 +4,24 @@
   become: true
   vars_files:
     - .iac_passwd.yaml
+  vars:
+    target_overlay_ip: "192.0.2.2"
+    target_container_ip: "192.0.2.19"
+    target_internet_ip: "8.8.8.8"
+
   tasks:
     - name: 1. Ping VM Verte via l'Overlay (Test du tunnel OVS/VXLAN)
-      ansible.builtin.command: ping -c 3 192.0.2.2
+      ansible.builtin.command: ping -c 3 {{ target_overlay_ip }}
       register: ping_vxlan
       changed_when: false
 
     - name: 2. Ping interne depuis blueC0 vers greenC0 (Traversée du VXLAN)
-      ansible.builtin.command: incus exec blueC0 -- ping -c 3 192.0.2.19
+      ansible.builtin.command: incus exec blueC0 -- ping -c 3 {{ target_container_ip }}
       register: ping_incus_overlay
       changed_when: false
 
     - name: 3. Ping Internet depuis blueC0 (Test NAT et Routage asymétrique)
-      ansible.builtin.command: incus exec blueC0 -- ping -c 3 8.8.8.8
+      ansible.builtin.command: incus exec blueC0 -- ping -c 3 {{ target_internet_ip }}
       register: ping_incus_internet
       changed_when: false
 

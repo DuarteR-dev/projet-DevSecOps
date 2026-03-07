@@ -27,9 +27,7 @@
     --run-command "rm -f /etc/netplan/*.yaml"
     --upload {{ lab_path }}/{{ item }}-netplan.yaml:/etc/netplan/01-netcfg.yaml
     --run-command "chmod 600 /etc/netplan/01-netcfg.yaml"
-    --mkdir /home/etu/.ssh
-    --upload {{ ansible_env.HOME }}/.ssh/authorized_keys:/home/etu/.ssh/authorized_keys
-    --run-command "chown -R etu:etu /home/etu/.ssh && chmod 700 /home/etu/.ssh && chmod 600 /home/etu/.ssh/authorized_keys"
+    --ssh-inject etu:file:{{ ansible_env.HOME }}/.ssh/authorized_keys
   loop: "{{ groups['vms'] }}"
   args:
     creates: "{{ lab_path }}/.{{ hostvars[item]['vm_name'] }}_baked"

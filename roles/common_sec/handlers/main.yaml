@@ -7,3 +7,7 @@
 - name: Recharger UFW
   community.general.ufw:
     state: reloaded
+
+- name: Recharger les règles udev
+  ansible.builtin.shell: udevadm control --reload-rules && udevadm trigger
+  changed_when: true
