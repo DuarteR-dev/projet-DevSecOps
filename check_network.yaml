@@ -5,8 +5,8 @@
   vars_files:
     - .iac_passwd.yaml
   vars:
-    target_overlay_ip: "192.0.2.2"
-    target_container_ip: "192.0.2.251" # <--- On cible l'IP statique de greenDHCP
+    target_overlay_ip: "{{ hostvars['vm-green']['overlay_ip_v4'] | ipaddr('address') }}"
+    target_container_ip: "{{ hostvars['vm-green']['my_containers'][0]['ip'] }}"
     target_internet_ip: "8.8.8.8"
 
   tasks:

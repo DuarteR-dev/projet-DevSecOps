@@ -21,16 +21,15 @@
   loop: "{{ groups['vms'] }}"
 
 - name: 4. Injecter le Netplan et la clé SSH
-  ansible.builtin.command: >
+  ansible.builtin.shell: >
     virt-customize -a {{ lab_path }}/{{ hostvars[item]['vm_name'] }}.qcow2
     --hostname {{ hostvars[item]['vm_name'] }}
     --upload {{ lab_path }}/{{ item }}-netplan.yaml:/etc/netplan/01-netcfg.yaml
-    --ssh-inject etu:file:{{ ansible_env.HOME }}/.ssh/authorized_keys
+    --ssh-inject etu:file:{{ ansible_user_dir }}/.ssh/authorized_keys &&
+    touch {{ lab_path }}/.{{ hostvars[item]['vm_name'] }}_baked
   loop: "{{ groups['vms'] }}"
   args:
     creates: "{{ lab_path }}/.{{ hostvars[item]['vm_name'] }}_baked"
-  register: provision_vms_baking_result
-  notify: Créer témoin
 
 - name: 5. Générer switch.yaml
   ansible.builtin.template:

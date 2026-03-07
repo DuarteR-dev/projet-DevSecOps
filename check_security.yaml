@@ -5,9 +5,6 @@
   vars_files:
     - .iac_passwd.yaml
   tasks:
-    - name: 1. Récupérer l'état des services du système
-      ansible.builtin.service_facts:
-
     - name: 2. Récupérer la configuration SSH
       ansible.builtin.command: sshd -T
       register: sshd_config_dump

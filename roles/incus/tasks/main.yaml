@@ -43,7 +43,7 @@
       {% if item.type == 'dhcp' %}
       iface eth0 inet static
           address {{ item.ip }}/24
-          gateway 192.0.2.{{ '1' if inventory_hostname == 'vm-blue' else '2' }}
+          gateway {{ overlay_gw_v4 }}
       {% else %}
       iface eth0 inet dhcp
       {% endif %}
@@ -69,7 +69,7 @@
       interface=eth0
       port=0
       dhcp-range={{ item.dhcp_range }},255.255.255.0,12h
-      dhcp-option=option:router,192.0.2.{{ '1' if inventory_hostname == 'vm-blue' else '2' }}
+      dhcp-option=option:router,{{ overlay_gw_v4 }}
       dhcp-option=option:dns-server,8.8.8.8
       EOF
       incus exec {{ item.name }} -- rc-update add dnsmasq default

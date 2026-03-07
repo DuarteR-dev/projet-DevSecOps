@@ -1,8 +1,0 @@
----
-- name: Créer témoin
-  ansible.builtin.file:
-    path: "{{ lab_path }}/.{{ hostvars[item]['vm_name'] }}_baked"
-    state: touch
-    mode: '0644'
-  loop: "{{ groups['vms'] }}"
-  when: provision_vms_baking_result.changed
