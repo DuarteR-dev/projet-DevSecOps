@@ -61,3 +61,9 @@
           "Audit DevSecOps terminé avec succès :
            Les politiques de sécurité (SSH durci et UFW actif)
            sont appliquées et vérifiées sur {{ inventory_hostname }}."
+
+    - name: 11. Récupérer le rapport d'Audit Lynis
+      ansible.builtin.fetch:
+        src: /var/log/lynis-report.dat
+        dest: "./reports/lynis-{{ inventory_hostname }}.dat"
+        flat: yes

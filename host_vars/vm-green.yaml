@@ -14,3 +14,12 @@ ovs_bridge_name: C-3PO-GREEN
 overlay_ip_v4: 192.0.2.2/24
 overlay_ip_v6: "2001:db8:683::1/64"
 overlay_mtu: 1450
+my_containers:
+  - name: greenDHCP
+    type: dhcp
+    ip: 192.0.2.251
+    dhcp_range: "192.0.2.10,192.0.2.49"
+  - name: greenC0
+    type: client
+  - name: greenC1
+    type: client

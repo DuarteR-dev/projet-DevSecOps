@@ -1,5 +1,8 @@
 ---
-- name: PLAY 1 Préparation et récupération des clés SSH
+# ============================================================
+# PLAY 1 : Préparation locale (SSH & Empreintes)
+# ============================================================
+- name: PLAY 1 - Préparation et récupération des clés SSH
   hosts: localhost
   gather_facts: true
   become: false
@@ -13,7 +16,7 @@
         host: "{{ hostvars[item].ansible_host }}"
         port: 22
         state: started
-        delay: 10
+        delay: 5
         timeout: 60
       loop: "{{ groups['vms'] }}"
 
@@ -24,12 +27,25 @@
         state: present
       loop: "{{ groups['vms'] }}"
 
-- name: PLAY 2 Hardening et Réseau Overlay
-  hosts: vms
+# ============================================================
+# PLAY 2 : Configuration du Routeur (Prioritaire pour Internet)
+# ============================================================
+- name: PLAY 2 - Amorçage de la Passerelle (VM Rouge)
+  hosts: router
   become: true
-  vars_files:
-    - .iac_passwd.yaml
+  vars_files: [.iac_passwd.yaml]
   roles:
-    - common_sec
-    - ovs_vxlan
-    - incus
+    - common_sec      # 1. Installe UFW et sécurise SSH
+    - network_router  # 2. Configure le NAT et le Forwarding !
+
+# ============================================================
+# PLAY 3 : Configuration des Tenants (Bleu & Vert)
+# ============================================================
+- name: PLAY 3 - Configuration des Tenants (Overlay et Services)
+  hosts: tenants
+  become: true
+  vars_files: [.iac_passwd.yaml]
+  roles:
+    - common_sec      # 1. Installe UFW (Internet marche maintenant !)
+    - network_tenant  # 2. Configure OVS et VXLAN
+    - incus           # 3. Télécharge et lance les conteneurs Alpine

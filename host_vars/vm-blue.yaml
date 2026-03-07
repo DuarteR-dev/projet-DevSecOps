@@ -14,3 +14,14 @@ ovs_bridge_name: C-3PO-BLUE
 overlay_ip_v4: 192.0.2.1/24
 overlay_ip_v6: "2001:db8:683::2/64"
 overlay_mtu: 1450
+my_containers:
+  - name: blueDHCP
+    type: dhcp
+    ip: 192.0.2.250
+    dhcp_range: "192.0.2.50,192.0.2.99"
+  - name: blueC0
+    type: client
+  - name: blueC1
+    type: client
+  - name: blueC2
+    type: client

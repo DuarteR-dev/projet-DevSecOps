@@ -1,0 +1,32 @@
+---
+- name: 1. Activer le routage IP au niveau du noyau
+  ansible.posix.sysctl:
+    name: "{{ item }}"
+    value: '1'
+    state: present
+    reload: true
+  loop: [net.ipv4.ip_forward, net.ipv6.conf.all.forwarding]
+
+- name: 2. Configurer le NAT MASQUERADE dans UFW
+  ansible.builtin.blockinfile:
+    path: /etc/ufw/before.rules
+    insertbefore: BOF
+    marker: "# {mark} ANSIBLE NAT RULES"
+    block: |
+      *nat
+      :POSTROUTING ACCEPT [0:0]
+      -A POSTROUTING -s 172.18.169.0/24 -o vlan128 -j MASQUERADE
+      -A POSTROUTING -s 172.18.170.0/24 -o vlan128 -j MASQUERADE
+      -A POSTROUTING -s 192.0.2.0/24 -o vlan128 -j MASQUERADE
+      COMMIT
+
+- name: 3. Autoriser le routage UFW
+  community.general.ufw:
+    default: allow
+    direction: routed
+
+- name: 4. Appliquer la configuration réseau Netplan
+  ansible.builtin.template:
+    src: 01-netcfg.yaml.j2
+    dest: /etc/netplan/01-netcfg.yaml
+  notify: Apply Netplan

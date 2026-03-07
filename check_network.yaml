@@ -6,7 +6,7 @@
     - .iac_passwd.yaml
   vars:
     target_overlay_ip: "192.0.2.2"
-    target_container_ip: "192.0.2.19"
+    target_container_ip: "192.0.2.251" # <--- On cible l'IP statique de greenDHCP
     target_internet_ip: "8.8.8.8"
 
   tasks:
@@ -15,7 +15,7 @@
       register: ping_vxlan
       changed_when: false
 
-    - name: 2. Ping de blueC0 vers greenC0
+    - name: 2. Ping de blueC0 vers greenDHCP (Inter-site)
       ansible.builtin.command: incus exec blueC0 -- ping -c 3 {{ target_container_ip }}
       register: ping_incus_overlay
       changed_when: false

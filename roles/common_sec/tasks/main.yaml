@@ -1,59 +1,5 @@
 ---
-- name: 1. Activer le routage IPv4 et IPv6 au niveau du noyau
-  ansible.posix.sysctl:
-    name: "{{ item }}"
-    value: '1'
-    sysctl_set: true
-    state: present
-    reload: true
-  loop:
-    - net.ipv4.ip_forward
-    - net.ipv6.conf.all.forwarding
-  when: inventory_hostname in ['vm-red', 'vm-blue', 'vm-green']
-
-- name: 2. Installer UFW sur la VM Rouge
-  ansible.builtin.apt:
-    name: ufw
-    state: present
-    update_cache: true
-  when: inventory_hostname == 'vm-red'
-
-- name: 3. UFW Règles NAT MASQUERADE sur la VM Rouge
-  ansible.builtin.blockinfile:
-    path: /etc/ufw/before.rules
-    insertbefore: BOF
-    block: |
-      *nat
-      :POSTROUTING ACCEPT [0:0]
-      -A POSTROUTING -s 172.18.169.0/24 -o vlan128 -j MASQUERADE
-      -A POSTROUTING -s 172.18.170.0/24 -o vlan128 -j MASQUERADE
-      -A POSTROUTING -s 192.0.2.0/24 -o vlan128 -j MASQUERADE
-      COMMIT
-  when: inventory_hostname == 'vm-red'
-  notify: Recharger UFW
-
-- name: 3.1 UFW Autoriser SSH sur la VM Rouge
-  community.general.ufw:
-    rule: allow
-    port: "{{ ssh_port | default('22') }}"
-    proto: tcp
-  when: inventory_hostname == 'vm-red'
-
-- name: 3.2 UFW Autoriser le routage sur la VM Rouge
-  community.general.ufw:
-    default: allow
-    direction: routed
-  when: inventory_hostname == 'vm-red'
-
-- name: 3.3 UFW Activer UFW sur la VM Rouge
-  community.general.ufw:
-    state: enabled
-  when: inventory_hostname == 'vm-red'
-
-- name: 3.4 UFW Recharger UFW
-  ansible.builtin.meta: flush_handlers
-
-- name: 4. Installer les paquets requis
+- name: 1. Installer les paquets de base et UFW
   ansible.builtin.apt:
     name:
       - ufw
@@ -63,75 +9,26 @@
       - ethtool
     state: present
     update_cache: true
-    cache_valid_time: 3600
 
-- name: 5. Correction du bug réseau VXLAN
-  ansible.builtin.copy:
-    dest: /etc/udev/rules.d/99-net-offload.rules
-    content: |
-      ACTION=="add", SUBSYSTEM=="net", KERNEL=="veth*", RUN+="/sbin/ethtool -K $name tx off"
-      ACTION=="add", SUBSYSTEM=="net", KERNEL=="vxlan*", RUN+="/sbin/ethtool -K $name tx off"
-  notify: Recharger les règles udev
-
-- name: 6. Sécuriser la configuration SSH
+- name: 2. Sécuriser la configuration SSH
   ansible.builtin.copy:
     dest: /etc/ssh/sshd_config.d/99-ansible-hardening.conf
     content: |
       PermitRootLogin {{ permit_root_login | default('no') }}
       PasswordAuthentication {{ password_authentication | default('no') }}
-    owner: root
-    group: root
     mode: '0644'
   notify: Redémarrer SSH
 
-- name: 7. UFW Autoriser SSH depuis DevNet
+- name: 3. UFW - Autoriser SSH depuis DevNet
   community.general.ufw:
     rule: allow
     port: "{{ ssh_port | default('22') }}"
     proto: tcp
     src: "{{ item }}"
-  loop: "{{ hostvars['localhost']['ansible_all_ipv4_addresses'] }}"
+  loop: "{{ hostvars['localhost']['ansible_all_ipv4_addresses'] | default(['127.0.0.1']) }}"
   notify: Recharger UFW
 
-- name: 7.1 UFW Autoriser le trafic Underlay
-  community.general.ufw:
-    rule: allow
-    src: 172.18.0.0/16
-  when: inventory_hostname in ['vm-blue', 'vm-green']
-  notify: Recharger UFW
-
-- name: 7.2 UFW Autoriser le trafic Overlay (INPUT)
-  community.general.ufw:
-    rule: allow
-    src: 192.0.2.0/24
-  when: inventory_hostname in ['vm-blue', 'vm-green']
-  notify: Recharger UFW
-
-- name: 7.3 UFW Autoriser le trafic Overlay (FORWARD)
-  community.general.ufw:
-    rule: allow
-    route: true
-    src: 192.0.2.0/24
-  when: inventory_hostname in ['vm-blue', 'vm-green']
-  notify: Recharger UFW
-
-- name: 7.4 UFW Autoriser tout le trafic interne sur le bridge OVS
-  community.general.ufw:
-    rule: allow
-    interface: "{{ ovs_bridge_name }}"
-    direction: in
-  when: inventory_hostname in ['vm-blue', 'vm-green']
-  notify: Recharger UFW
-
-- name: 7.5 UFW Autoriser le trafic entrant depuis le tunnel VXLAN
-  community.general.ufw:
-    rule: allow
-    interface: vxlanGreenBlue
-    direction: in
-  when: inventory_hostname in ['vm-blue', 'vm-green']
-  notify: Recharger UFW
-
-- name: 7.6 UFW Activer le pare-feu et refuser par défaut en entrée
+- name: 4. Activer UFW et définir la politique par défaut
   community.general.ufw:
     state: enabled
     policy: deny

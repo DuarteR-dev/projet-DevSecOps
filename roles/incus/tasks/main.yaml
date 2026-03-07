@@ -1,68 +1,89 @@
 ---
-- name: 1. Vérifier l'installation d'Incus
+- name: 0. Installer le paquet Incus
   ansible.builtin.apt:
     name: incus
     state: present
+    update_cache: true
 
-- name: 2. Initialiser Incus
+- name: 1. Initialiser Incus (Minimal)
   ansible.builtin.command: incus admin init --minimal
   args:
     creates: /var/lib/incus/cluster.crt
-  when: inventory_hostname in ['vm-blue', 'vm-green']
 
-- name: 3. Supprimer l'ancienne carte eth0
-  ansible.builtin.command: incus profile device remove default eth0
-  failed_when: false
+- name: 2. Vérifier si le bridge OVS est déjà configuré dans le profil
+  ansible.builtin.command: incus profile show default
+  register: incus_profile_output
   changed_when: false
-  when: inventory_hostname in ['vm-blue', 'vm-green']
 
-- name: 4. Créer la carte eth0 attachée au bridge OVS
-  ansible.builtin.command: "incus profile device add default eth0 nic nictype=bridged parent={{ ovs_bridge_name }} mtu={{ overlay_mtu }}"
-  register: profile_add
-  changed_when: profile_add.rc == 0
-  when: inventory_hostname in ['vm-blue', 'vm-green']
-
-- name: 5. Définir la topologie des conteneurs pour la VM Bleue
-  ansible.builtin.set_fact:
-    my_containers:
-      - { name: 'blueC0', ip: '192.0.2.60' }
-      - { name: 'blueC1', ip: '192.0.2.53' }
-      - { name: 'blueC2', ip: '192.0.2.59' }
-      - { name: 'blueDHCP', ip: '192.0.2.250' }
-  when: inventory_hostname == 'vm-blue'
-
-- name: 6. Définir la topologie des conteneurs pour la VM Verte
-  ansible.builtin.set_fact:
-    my_containers:
-      - { name: 'greenC0', ip: '192.0.2.19' }
-      - { name: 'greenC1', ip: '192.0.2.20' }
-      - { name: 'greenDHCP', ip: '192.0.2.251' }
-  when: inventory_hostname == 'vm-green'
-
-- name: 7. Lancer les conteneurs
-  ansible.builtin.command: "incus launch images:alpine/edge {{ item.name }}"
-  args:
-    creates: "/var/log/incus/{{ item.name }}"
-  loop: "{{ my_containers }}"
-  when: inventory_hostname in ['vm-blue', 'vm-green']
-
-- name: 8. Configurer le réseau (IPAM) via injection de fichiers (Version simplifiée)
+- name: 3. Configurer le bridge OVS dans le profil par défaut
   ansible.builtin.shell: |
-    # Injection du fichier interfaces
-    echo "auto lo
-    iface lo inet loopback
+    incus profile device remove default eth0 || true
+    incus profile device add default eth0 nic nictype=bridged parent={{ ovs_bridge_name }} mtu={{ overlay_mtu }}
+  when: "ovs_bridge_name not in incus_profile_output.stdout"
 
-    auto eth0
-    iface eth0 inet static
-        address {{ item.ip }}
-        netmask 255.255.255.0
-        gateway 192.0.2.{{ '1' if inventory_hostname == 'vm-blue' else '2' }}" | incus file push - {{ item.name }}/etc/network/interfaces
+- name: 4. Vérifier les conteneurs existants
+  ansible.builtin.command: incus list -c n --format csv
+  register: incus_list
+  changed_when: false
 
-    # Injection DNS
-    echo "nameserver 8.8.8.8" | incus file push - {{ item.name }}/etc/resolv.conf
-
-    # Redémarrage pour appliquer
-    incus restart {{ item.name }}
+- name: 5. Lancer les conteneurs Alpine
+  ansible.builtin.command: "incus launch images:alpine/edge {{ item.name }}"
   loop: "{{ my_containers }}"
-  when: inventory_hostname in ['vm-blue', 'vm-green']
-  changed_when: true
+  when: "item.name not in incus_list.stdout"
+
+- name: 6. Injecter la configuration réseau (IP et DNS)
+  ansible.builtin.shell:
+    cmd: |
+      cat <<EOF | incus file push - {{ item.name }}/etc/network/interfaces
+      auto lo
+      iface lo inet loopback
+
+      auto eth0
+      {% if item.type == 'dhcp' %}
+      iface eth0 inet static
+          address {{ item.ip }}/24
+          gateway 192.0.2.{{ '1' if inventory_hostname == 'vm-blue' else '2' }}
+      {% else %}
+      iface eth0 inet dhcp
+      {% endif %}
+      iface eth0 inet6 auto
+      EOF
+
+      {% if item.type == 'dhcp' %}
+      cat <<EOF | incus file push - {{ item.name }}/etc/resolv.conf
+      nameserver 8.8.8.8
+      nameserver 1.1.1.1
+      EOF
+      {% endif %}
+  loop: "{{ my_containers }}"
+
+- name: 7. Redémarrer les serveurs DHCP pour appliquer l'IP statique
+  ansible.builtin.command: incus restart {{ item.name }}
+  loop: "{{ my_containers }}"
+  when: item.type == 'dhcp'
+
+- name: 8. Attendre l'activation du réseau DHCP
+  ansible.builtin.command: sleep 3
+  changed_when: false
+
+- name: 9. Installer et configurer dnsmasq (Serveurs DHCP uniquement)
+  ansible.builtin.shell:
+    cmd: |
+      incus exec {{ item.name }} -- apk update
+      incus exec {{ item.name }} -- apk add dnsmasq
+      cat <<EOF | incus file push - {{ item.name }}/etc/dnsmasq.conf
+      interface=eth0
+      port=0
+      dhcp-range={{ item.dhcp_range }},255.255.255.0,12h
+      dhcp-option=option:router,192.0.2.{{ '1' if inventory_hostname == 'vm-blue' else '2' }}
+      dhcp-option=option:dns-server,8.8.8.8
+      EOF
+      incus exec {{ item.name }} -- rc-update add dnsmasq default
+      incus exec {{ item.name }} -- /etc/init.d/dnsmasq restart || true
+  loop: "{{ my_containers }}"
+  when: item.type == 'dhcp'
+
+- name: 10. Redémarrer les clients pour qu'ils obtiennent une IP via DHCP
+  ansible.builtin.command: incus restart {{ item.name }}
+  loop: "{{ my_containers }}"
+  when: item.type == 'client'
