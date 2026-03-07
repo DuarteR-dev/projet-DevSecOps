@@ -8,9 +8,9 @@ underlay_ip: 172.18.170.10
 underlay_cidr: 24
 underlay_gw: 172.18.170.1
 
-vxlan_id: 1234
+vxlan_id: 683
 vxlan_remote_ip: 172.18.169.10 # IP VM Bleue
 ovs_bridge_name: C-3PO-GREEN
 overlay_ip_v4: 192.0.2.2/24
 overlay_ip_v6: "2001:db8:683::1/64"
-overlay_mtu: 9000
+overlay_mtu: 1450

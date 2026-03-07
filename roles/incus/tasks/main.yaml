@@ -17,6 +17,13 @@
   failed_when: false
   when: inventory_hostname in ['vm-blue', 'vm-green']
 
+- name: Configurer le MTU du profil par défaut pour correspondre à l'Overlay
+  ansible.builtin.command: "incus profile device set default eth0 mtu 1450"
+  register: incus_mtu_set
+  changed_when: incus_mtu_set.rc == 0
+  failed_when: false
+  when: inventory_hostname in ['vm-blue', 'vm-green']
+
 - name: Nettoyer l'ancien conteneur de test c1 (s'il existe)
   ansible.builtin.command: "incus delete -f c1"
   failed_when: false
@@ -60,7 +67,7 @@
         gateway 192.0.2.{{ '1' if inventory_hostname == 'vm-blue' else '2' }}
     EOF"
     incus exec {{ item.name }} -- sh -c "echo 'nameserver 8.8.8.8' > /etc/resolv.conf"
-    incus exec {{ item.name }} -- sh -c "ip addr flush dev eth0; ifup eth0"
+    incus exec {{ item.name }} -- sh -c "ifdown eth0 2>/dev/null; ifup eth0"
   loop: "{{ my_containers }}"
   when: inventory_hostname in ['vm-blue', 'vm-green']
   changed_when: true

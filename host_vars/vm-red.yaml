@@ -7,7 +7,7 @@ mgmt_vlan: 128
 mgmt_ip_v4: 10.0.128.66/28
 mgmt_ip_v6: "2001:678:3fc:80::2/64"
 mgmt_gw: 10.0.128.65
-overlay_mtu: 9000
+overlay_mtu: 1450
 
 tenant_vlans:
   - id: 681

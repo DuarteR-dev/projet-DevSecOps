@@ -35,22 +35,6 @@
   when: inventory_hostname == 'vm-red'
   notify: Recharger UFW
 
-- name: UFW - Configurer le NOTRACK (Overlay) sur VMs Bleue et Verte
-  ansible.builtin.blockinfile:
-    path: /etc/ufw/before.rules
-    insertbefore: BOF
-    block: |
-      *raw
-      :PREROUTING ACCEPT [0:0]
-      :OUTPUT ACCEPT [0:0]
-      -A PREROUTING -s 192.0.2.0/24 -j NOTRACK
-      -A PREROUTING -d 192.0.2.0/24 -j NOTRACK
-      -A OUTPUT -s 192.0.2.0/24 -j NOTRACK
-      -A OUTPUT -d 192.0.2.0/24 -j NOTRACK
-      COMMIT
-  when: inventory_hostname in ['vm-blue', 'vm-green']
-  notify: Recharger UFW
-
 - name: UFW - Autoriser SSH sur la VM Rouge (prévention de blocage)
   community.general.ufw:
     rule: allow
@@ -58,10 +42,11 @@
     proto: tcp
   when: inventory_hostname == 'vm-red'
 
-- name: UFW - Autoriser le routage (Forward) pour TOUTES les VMs
+- name: UFW - Autoriser le routage (Forward) pour la VM Rouge
   community.general.ufw:
     default: allow
     direction: routed
+  when: inventory_hostname == 'vm-red'
 
 - name: UFW - Activer UFW sur la VM Rouge
   community.general.ufw:
@@ -101,12 +86,13 @@
   notify: Redémarrer SSH
 
 # 6. Configurer UFW pour autoriser le trafic nécessaire et sécuriser les accès sur toutes les VMs
-- name: UFW - Autoriser SSH depuis la machine DevNet uniquement (Moindre privilège)
+- name: UFW - Autoriser SSH depuis toutes les IP de la machine DevNet
   community.general.ufw:
     rule: allow
     port: "{{ ssh_port | default('22') }}"
     proto: tcp
-    src: "{{ hostvars['localhost']['devnet_ip'] }}"
+    src: "{{ item }}"
+  loop: "{{ hostvars['localhost']['ansible_all_ipv4_addresses'] }}"
   notify: Recharger UFW
 
 - name: UFW - Autoriser le trafic Underlay (inclut VXLAN natif sur 4789/8472)
@@ -116,15 +102,23 @@
   when: inventory_hostname in ['vm-blue', 'vm-green']
   notify: Recharger UFW
 
-- name: UFW - Autoriser le trafic interne de l'Overlay
+- name: UFW - Autoriser le trafic entrant de l'Overlay (INPUT)
   community.general.ufw:
     rule: allow
     src: 192.0.2.0/24
   when: inventory_hostname in ['vm-blue', 'vm-green']
   notify: Recharger UFW
 
+- name: UFW - Autoriser le trafic routé/ponté de l'Overlay (FORWARD)
+  community.general.ufw:
+    rule: allow
+    route: true
+    src: 192.0.2.0/24
+  when: inventory_hostname in ['vm-blue', 'vm-green']
+  notify: Recharger UFW
+
 - name: UFW - Activer le pare-feu et refuser par défaut en entrée
   community.general.ufw:
-    state: enabled
+    state: disabled  # <-- DESACTIVÉ POUR LE TEST
     policy: deny
     direction: incoming
