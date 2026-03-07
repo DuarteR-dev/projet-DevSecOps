@@ -1,5 +1,5 @@
 ---
-- name: 1. Installer Open vSwitch et radvd
+- name: 1. Installer les paquets
   ansible.builtin.apt:
     name:
       - openvswitch-switch
@@ -14,7 +14,7 @@
       ACTION=="add", SUBSYSTEM=="net", KERNEL=="vxlan*", RUN+="/sbin/ethtool -K $name tx off"
   notify: Recharger les règles udev
 
-- name: 3. Activer le routage IP (IPv4 & IPv6 pour les RAs)
+- name: 3. Activer le routage IP
   ansible.posix.sysctl:
     name: "{{ item }}"
     value: '1'
@@ -23,6 +23,7 @@
   loop:
     - net.ipv4.ip_forward
     - net.ipv6.conf.all.forwarding
+  changed_when: true
 
 - name: 4. Appliquer la configuration réseau Netplan
   ansible.builtin.template:
@@ -46,16 +47,18 @@
   community.general.ufw:
     rule: allow
     src: 172.18.0.0/16
+  changed_when: true
 
-- name: 6. UFW - Autoriser le trafic Overlay IPv4 & IPv6 (Flux Conteneurs INPUT)
+- name: 6. UFW - Autoriser le trafic Overlay IPv4 & IPv6 (Conteneurs INPUT)
   community.general.ufw:
     rule: allow
     src: "{{ item }}"
   loop:
     - 192.0.2.0/24
     - 2001:db8:683::/64
+  changed_when: true
 
-- name: 7. UFW - Autoriser le trafic Overlay IPv4 & IPv6 (Flux Conteneurs FORWARD)
+- name: 7. UFW - Autoriser le trafic Overlay IPv4 & IPv6 (Conteneurs FORWARD)
   community.general.ufw:
     rule: allow
     route: true
@@ -63,6 +66,7 @@
   loop:
     - 192.0.2.0/24
     - 2001:db8:683::/64
+  changed_when: true
 
 - name: 7.1. UFW - Autoriser le trafic retour d'Internet vers Overlay (Routage asymétrique)
   community.general.ufw:
@@ -90,6 +94,8 @@
   loop:
     - "{{ ovs_bridge_name }}"
     - "vxlanGreenBlue"
+  changed_when: true
 
 - name: 10. Forcer l'application du réseau avant de passer à Incus
   ansible.builtin.meta: flush_handlers
+  changed_when: true

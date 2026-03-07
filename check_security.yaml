@@ -40,7 +40,7 @@
       ansible.builtin.apt:
         name: lynis
         state: present
-        update_cache: yes
+        update_cache: true
 
     - name: 8. Lancer un audit Lynis
       ansible.builtin.command: lynis audit system --quick
@@ -63,4 +63,4 @@
       ansible.builtin.fetch:
         src: /var/log/lynis-report.dat
         dest: "./reports/lynis-{{ inventory_hostname }}.dat"
-        flat: yes
+        flat: true

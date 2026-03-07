@@ -5,7 +5,7 @@
   vars_files:
     - .iac_passwd.yaml
   vars:
-    target_overlay_ip: "{{ hostvars['vm-green']['overlay_ip_v4'] | ipaddr('address') }}"
+    target_overlay_ip: "{{ hostvars['vm-green']['overlay_ip_v4'].split('/')[0] }}"
     target_container_ip: "{{ hostvars['vm-green']['my_containers'][0]['ip'] }}"
     target_internet_ip: "8.8.8.8"
 

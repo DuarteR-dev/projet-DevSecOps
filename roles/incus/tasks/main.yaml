@@ -10,18 +10,18 @@
   args:
     creates: /var/lib/incus/cluster.crt
 
-- name: 2. Vérifier si le bridge OVS est déjà configuré dans le profil
+- name: 2. Vérifier le bridge OVS
   ansible.builtin.command: incus profile show default
   register: incus_profile_output
   changed_when: false
 
-- name: 3. Configurer le bridge OVS dans le profil par défaut
+- name: 3. Configurer le bridge OVS
   ansible.builtin.shell: |
     incus profile device remove default eth0 || true
     incus profile device add default eth0 nic nictype=bridged parent={{ ovs_bridge_name }} mtu={{ overlay_mtu }}
   when: "ovs_bridge_name not in incus_profile_output.stdout"
 
-- name: 4. Vérifier les conteneurs existants
+- name: 4. Vérifier les conteneurs
   ansible.builtin.command: incus list -c n --format csv
   register: incus_list
   changed_when: false
@@ -31,7 +31,7 @@
   loop: "{{ my_containers }}"
   when: "item.name not in incus_list.stdout"
 
-- name: 6. Injecter la configuration réseau (IP)
+- name: 6. Injecter la configuration réseau
   ansible.builtin.shell:
     cmd: |
       incus exec {{ item.name }} -- sysctl -w net.ipv6.conf.eth0.accept_ra=2
@@ -55,10 +55,10 @@
   loop: "{{ my_containers }}"
   when: item.type == 'dhcp'
 
-- name: 8. Attendre l'activation du réseau DHCP
-  ansible.builtin.command: sleep 3
-  changed_when: false
-
+- name: 8. Attendre 3 secondes
+  ansible.builtin.wait_for:
+    timeout: 3
+  delegate_to: localhost
 - name: 9. Installer et configurer dnsmasq
   ansible.builtin.shell:
     cmd: |

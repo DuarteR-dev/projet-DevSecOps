@@ -1,5 +1,5 @@
 ---
-- name: 1. Installer les paquets de base et UFW
+- name: 1. Installer les paquets necessaires
   ansible.builtin.apt:
     name:
       - ufw
@@ -16,7 +16,7 @@
     content: |
       PermitRootLogin {{ permit_root_login | default('no') }}
       PasswordAuthentication {{ password_authentication | default('no') }}
-    mode: '0644'
+    mode: '0600'
   notify: Redémarrer SSH
 
 - name: 3. UFW - Autoriser SSH depuis DevNet

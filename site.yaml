@@ -1,7 +1,4 @@
 ---
-# ============================================================
-# PLAY 1 : Préparation locale (SSH & Empreintes)
-# ============================================================
 - name: PLAY 1 - Préparation et récupération des clés SSH
   hosts: localhost
   gather_facts: true
@@ -27,25 +24,19 @@
         state: present
       loop: "{{ groups['vms'] }}"
 
-# ============================================================
-# PLAY 2 : Configuration du Routeur (Prioritaire pour Internet)
-# ============================================================
 - name: PLAY 2 - Amorçage de la Passerelle (VM Rouge)
   hosts: router
   become: true
   vars_files: [.iac_passwd.yaml]
   roles:
-    - common_sec      # 1. Installe UFW et sécurise SSH
-    - network_router  # 2. Configure le NAT et le Forwarding !
+    - common_sec
+    - network_router
 
-# ============================================================
-# PLAY 3 : Configuration des Tenants (Bleu & Vert)
-# ============================================================
 - name: PLAY 3 - Configuration des Tenants (Overlay et Services)
   hosts: tenants
   become: true
   vars_files: [.iac_passwd.yaml]
   roles:
-    - common_sec      # 1. Installe UFW (Internet marche maintenant !)
-    - network_tenant  # 2. Configure OVS et VXLAN
-    - incus           # 3. Télécharge et lance les conteneurs Alpine
+    - common_sec
+    - network_tenant
+    - incus
