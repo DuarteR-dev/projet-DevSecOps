@@ -71,3 +71,14 @@
   loop: "{{ my_containers }}"
   when: inventory_hostname in ['vm-blue', 'vm-green']
   changed_when: true
+
+- name: Désactiver l'offloading TX sur l'hôte (APRÈS la création des conteneurs)
+  ansible.builtin.shell: |
+    # Désactiver sur toutes les interfaces veth des conteneurs
+    for iface in $(ip -o link show type veth | awk '{print $2}' | cut -d@ -f1); do
+      ethtool -K $iface tx off >/dev/null 2>&1 || true
+    done
+    # Désactiver sur le tunnel VXLAN
+    ethtool -K vxlanGreenBlue tx off >/dev/null 2>&1 || true
+  when: inventory_hostname in ['vm-blue', 'vm-green']
+  changed_when: true

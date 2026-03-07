@@ -117,6 +117,22 @@
   when: inventory_hostname in ['vm-blue', 'vm-green']
   notify: Recharger UFW
 
+- name: UFW - Autoriser tout le trafic interne sur le bridge OVS
+  community.general.ufw:
+    rule: allow
+    interface: "{{ ovs_bridge_name }}"
+    direction: in
+  when: inventory_hostname in ['vm-blue', 'vm-green']
+  notify: Recharger UFW
+
+- name: UFW - Autoriser le trafic entrant depuis le tunnel VXLAN
+  community.general.ufw:
+    rule: allow
+    interface: vxlanGreenBlue
+    direction: in
+  when: inventory_hostname in ['vm-blue', 'vm-green']
+  notify: Recharger UFW
+
 - name: UFW - Activer le pare-feu et refuser par défaut en entrée
   community.general.ufw:
     state: disabled  # <-- DESACTIVÉ POUR LE TEST

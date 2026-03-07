@@ -6,13 +6,11 @@ network:
     enp0s1:
       dhcp4: false
       dhcp6: false
-      mtu: {{ overlay_mtu + 50 }}
 
   vlans:
     vlan{{ underlay_vlan }}:
       id: {{ underlay_vlan }}
       link: enp0s1
-      mtu: {{ overlay_mtu + 50 }}
       addresses:
         - {{ underlay_ip }}/{{ underlay_cidr }}
       routes:
