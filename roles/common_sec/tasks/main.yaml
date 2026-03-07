@@ -135,6 +135,6 @@
 
 - name: UFW - Activer le pare-feu et refuser par défaut en entrée
   community.general.ufw:
-    state: disabled  # <-- DESACTIVÉ POUR LE TEST
+    state: enabled
     policy: deny
     direction: incoming
