@@ -1,5 +1,5 @@
 ---
-- name: 1. Créer témoin
+- name: Créer témoin
   ansible.builtin.file:
     path: "{{ lab_path }}/.{{ hostvars[item]['vm_name'] }}_baked"
     state: touch
