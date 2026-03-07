@@ -5,6 +5,7 @@
       - openvswitch-switch
       - radvd
     state: present
+    update_cache: true
 
 - name: 2. Correction du bug réseau VXLAN (udev)
   ansible.builtin.copy:
@@ -13,6 +14,7 @@
       ACTION=="add", SUBSYSTEM=="net", KERNEL=="veth*", RUN+="/sbin/ethtool -K $name tx off"
       ACTION=="add", SUBSYSTEM=="net", KERNEL=="vxlan*", RUN+="/sbin/ethtool -K $name tx off"
   notify: Recharger les règles udev
+  mode: '0644'
 
 - name: 3. Activer le routage IP
   ansible.posix.sysctl:
@@ -28,6 +30,7 @@
   ansible.builtin.template:
     src: 01-netcfg.yaml.j2
     dest: /etc/netplan/01-netcfg.yaml
+    mode: '0600'
   notify: Apply Netplan
 
 - name: 4.1. Configurer radvd pour les annonces IPv6 (SLAAC)
