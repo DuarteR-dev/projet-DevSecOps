@@ -6,12 +6,17 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   security-and-lint:
     runs-on: ubuntu-latest
     steps:
-      - name: 1. Checkout du code
+      - name: 1. Checkout du code (Historique complet pour Gitleaks)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: 2. Secret Scanning (Gitleaks)
         uses: gitleaks/gitleaks-action@v2
@@ -37,9 +42,11 @@ jobs:
 
       - name: 6. Run Ansible Lint
         run: ansible-lint -c .ansible-lint
+        env:
+          ANSIBLE_FORCE_COLOR: '1'
 
       - name: 7. Run Checkov (SAST IaC)
-        uses: bridgecrewio/checkov-action@master
+        uses: bridgecrewio/checkov-action@v12
         with:
           directory: .
           framework: ansible
