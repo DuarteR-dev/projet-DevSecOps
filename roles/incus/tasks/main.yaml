@@ -88,3 +88,8 @@
   loop: "{{ my_containers }}"
   when: item.type == 'client'
   changed_when: true
+
+- name: 11. Attendre 3 secondes
+  ansible.builtin.wait_for:
+    timeout: 3
+  delegate_to: localhost

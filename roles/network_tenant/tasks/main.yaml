@@ -13,8 +13,8 @@
     content: |
       ACTION=="add", SUBSYSTEM=="net", KERNEL=="veth*", RUN+="/sbin/ethtool -K $name tx off"
       ACTION=="add", SUBSYSTEM=="net", KERNEL=="vxlan*", RUN+="/sbin/ethtool -K $name tx off"
+    mode: '0644'
   notify: Recharger les règles udev
-  mode: '0644'
 
 - name: 3. Activer le routage IP
   ansible.posix.sysctl:
