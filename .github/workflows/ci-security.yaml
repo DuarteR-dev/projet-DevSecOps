@@ -10,35 +10,35 @@ jobs:
   security-and-lint:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout du code
+      - name: 1. Checkout du code
         uses: actions/checkout@v4
 
-      - name: Secret Scanning (Gitleaks)
+      - name: 2. Secret Scanning (Gitleaks)
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Installation de Python
+      - name: 3. Installation de Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
           cache: 'pip'
 
-      - name: Installer les dépendances Python et Ansible
+      - name: 4. Installer les dépendances Python et Ansible
         run: |
           pip install -r requirements.txt
           pip install ansible-lint
           ansible-galaxy collection install -r requirements.yaml
 
-      - name: Créer les fichiers secrets factices pour la CI
+      - name: 5. Créer les fichiers secrets factices pour la CI
         run: |
           touch .vault_pass.txt
           touch .iac_passwd.yaml
 
-      - name: Run Ansible Lint
+      - name: 6. Run Ansible Lint
         run: ansible-lint -c .ansible-lint
 
-      - name: Run Checkov (SAST IaC)
+      - name: 7. Run Checkov (SAST IaC)
         uses: bridgecrewio/checkov-action@master
         with:
           directory: .

@@ -5,7 +5,7 @@
     state: present
     update_cache: true
 
-- name: 1. Initialiser Incus (Minimal)
+- name: 1. Initialiser Incus
   ansible.builtin.command: incus admin init --minimal
   args:
     creates: /var/lib/incus/cluster.crt
@@ -49,14 +49,6 @@
       iface eth0 inet6 auto
       EOF
 
-      {% if item.type == 'dhcp' %}
-      cat <<EOF | incus file push - {{ item.name }}/etc/resolv.conf
-      nameserver 8.8.8.8
-      nameserver 1.1.1.1
-      EOF
-      {% endif %}
-  loop: "{{ my_containers }}"
-
 - name: 7. Redémarrer les serveurs DHCP pour appliquer l'IP statique
   ansible.builtin.command: incus restart {{ item.name }}
   loop: "{{ my_containers }}"
@@ -66,7 +58,7 @@
   ansible.builtin.command: sleep 3
   changed_when: false
 
-- name: 9. Installer et configurer dnsmasq (Serveurs DHCP uniquement)
+- name: 9. Installer et configurer dnsmasq
   ansible.builtin.shell:
     cmd: |
       incus exec {{ item.name }} -- apk update

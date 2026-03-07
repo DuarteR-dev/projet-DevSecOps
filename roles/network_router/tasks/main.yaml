@@ -1,5 +1,5 @@
 ---
-- name: 1. Activer le routage IP au niveau du noyau
+- name: 1. Activer le routage IP
   ansible.posix.sysctl:
     name: "{{ item }}"
     value: '1'

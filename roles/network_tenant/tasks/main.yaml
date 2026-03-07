@@ -12,29 +12,50 @@
       ACTION=="add", SUBSYSTEM=="net", KERNEL=="vxlan*", RUN+="/sbin/ethtool -K $name tx off"
   notify: Recharger les règles udev
 
-- name: 3. Appliquer la configuration réseau Netplan
+- name: 3. Activer le routage IP (IPv4 & IPv6 pour les RAs)
+  ansible.posix.sysctl:
+    name: "{{ item }}"
+    value: '1'
+    state: present
+    reload: true
+  loop:
+    - net.ipv4.ip_forward
+    - net.ipv6.conf.all.forwarding
+
+- name: 4. Appliquer la configuration réseau Netplan
   ansible.builtin.template:
     src: 01-netcfg.yaml.j2
     dest: /etc/netplan/01-netcfg.yaml
   notify: Apply Netplan
 
-- name: 4. UFW - Autoriser le trafic Underlay (Inter-VMs)
+- name: 5. UFW - Autoriser le trafic Underlay (Inter-VMs)
   community.general.ufw:
     rule: allow
     src: 172.18.0.0/16
 
-- name: 5. UFW - Autoriser le trafic Overlay (Flux Conteneurs INPUT)
+- name: 6. UFW - Autoriser le trafic Overlay IPv4 & IPv6 (Flux Conteneurs INPUT)
   community.general.ufw:
     rule: allow
-    src: 192.0.2.0/24
+    src: "{{ item }}"
+  loop:
+    - 192.0.2.0/24
+    - 2001:db8:683::/64
 
-- name: 6. UFW - Autoriser le trafic Overlay (Flux Conteneurs FORWARD)
+- name: 7. UFW - Autoriser le trafic Overlay IPv4 & IPv6 (Flux Conteneurs FORWARD)
   community.general.ufw:
     rule: allow
     route: true
-    src: 192.0.2.0/24
+    src: "{{ item }}"
+  loop:
+    - 192.0.2.0/24
+    - 2001:db8:683::/64
 
-- name: 7. UFW - Autoriser les interfaces locales (Bridge et VXLAN)
+- name: 8. UFW - Autoriser l'IPv6 (Indispensable pour SLAAC/ICMPv6)
+  community.general.ufw:
+    rule: allow
+    proto: ipv6
+
+- name: 9. UFW - Autoriser les interfaces locales (Bridge et VXLAN)
   community.general.ufw:
     rule: allow
     interface: "{{ item }}"
@@ -43,5 +64,5 @@
     - "{{ ovs_bridge_name }}"
     - "vxlanGreenBlue"
 
-- name: 8. Forcer l'application du réseau avant de passer à Incus
+- name: 9. Forcer l'application du réseau avant de passer à Incus
   ansible.builtin.meta: flush_handlers
