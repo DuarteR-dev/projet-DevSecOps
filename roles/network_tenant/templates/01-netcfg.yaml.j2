@@ -39,7 +39,6 @@ network:
         - "{{ overlay_ip_v6 }}"
       mtu: {{ overlay_mtu }}
       ipv6-address-generation: eui64
-      ipv6-router-advertisements: true 
       routing-policy:
         - from: {{ overlay_ip_v6 }}
           table: 100

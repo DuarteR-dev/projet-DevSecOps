@@ -31,9 +31,10 @@
   loop: "{{ my_containers }}"
   when: "item.name not in incus_list.stdout"
 
-- name: 6. Injecter la configuration réseau (IP et DNS)
+- name: 6. Injecter la configuration réseau (IP)
   ansible.builtin.shell:
     cmd: |
+      incus exec {{ item.name }} -- sysctl -w net.ipv6.conf.eth0.accept_ra=2
       cat <<EOF | incus file push - {{ item.name }}/etc/network/interfaces
       auto lo
       iface lo inet loopback
@@ -46,8 +47,8 @@
       {% else %}
       iface eth0 inet dhcp
       {% endif %}
-      iface eth0 inet6 auto
       EOF
+  loop: "{{ my_containers }}"
 
 - name: 7. Redémarrer les serveurs DHCP pour appliquer l'IP statique
   ansible.builtin.command: incus restart {{ item.name }}
@@ -61,6 +62,7 @@
 - name: 9. Installer et configurer dnsmasq
   ansible.builtin.shell:
     cmd: |
+      incus exec {{ item.name }} -- sh -c 'echo "nameserver 8.8.8.8" > /etc/resolv.conf'
       incus exec {{ item.name }} -- apk update
       incus exec {{ item.name }} -- apk add dnsmasq
       cat <<EOF | incus file push - {{ item.name }}/etc/dnsmasq.conf
@@ -71,7 +73,7 @@
       dhcp-option=option:dns-server,8.8.8.8
       EOF
       incus exec {{ item.name }} -- rc-update add dnsmasq default
-      incus exec {{ item.name }} -- /etc/init.d/dnsmasq restart || true
+      incus exec {{ item.name }} -- rc-service dnsmasq restart || /etc/init.d/dnsmasq restart
   loop: "{{ my_containers }}"
   when: item.type == 'dhcp'
 

@@ -1,7 +1,9 @@
 ---
-- name: 1. Installer Open vSwitch
+- name: 1. Installer Open vSwitch et radvd
   ansible.builtin.apt:
-    name: openvswitch-switch
+    name:
+      - openvswitch-switch
+      - radvd
     state: present
 
 - name: 2. Correction du bug réseau VXLAN (udev)
@@ -28,6 +30,18 @@
     dest: /etc/netplan/01-netcfg.yaml
   notify: Apply Netplan
 
+- name: 4.1. Configurer radvd pour les annonces IPv6 (SLAAC)
+  ansible.builtin.template:
+    src: radvd.j2
+    dest: /etc/radvd.conf
+  notify: Recharger radvd
+
+- name: 4.2. Activer et démarrer le service radvd
+  ansible.builtin.service:
+    name: radvd
+    state: started
+    enabled: true
+
 - name: 5. UFW - Autoriser le trafic Underlay (Inter-VMs)
   community.general.ufw:
     rule: allow
@@ -50,10 +64,23 @@
     - 192.0.2.0/24
     - 2001:db8:683::/64
 
-- name: 8. UFW - Autoriser l'IPv6 (Indispensable pour SLAAC/ICMPv6)
+- name: 7.1. UFW - Autoriser le trafic retour d'Internet vers Overlay (Routage asymétrique)
   community.general.ufw:
     rule: allow
-    proto: ipv6
+    route: true
+    dest: "{{ item }}"
+  loop:
+    - 192.0.2.0/24
+    - 2001:db8:683::/64
+
+- name: 8. UFW - Autoriser le trafic Overlay (SLAAC/ICMPv6 et DHCP)
+  community.general.ufw:
+    rule: allow
+    direction: in
+    interface: "{{ item }}"
+  loop:
+    - "{{ ovs_bridge_name }}"
+    - "vxlanGreenBlue"
 
 - name: 9. UFW - Autoriser les interfaces locales (Bridge et VXLAN)
   community.general.ufw:
@@ -64,5 +91,5 @@
     - "{{ ovs_bridge_name }}"
     - "vxlanGreenBlue"
 
-- name: 9. Forcer l'application du réseau avant de passer à Incus
+- name: 10. Forcer l'application du réseau avant de passer à Incus
   ansible.builtin.meta: flush_handlers

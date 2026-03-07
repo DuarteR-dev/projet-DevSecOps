@@ -1,0 +1,9 @@
+interface {{ ovs_bridge_name }} {
+    AdvSendAdvert on;
+    MinRtrAdvInterval 3;
+    MaxRtrAdvInterval 10;
+    prefix 2001:db8:683::/64 {
+        AdvOnLink on;
+        AdvAutonomous on;
+    };
+};
