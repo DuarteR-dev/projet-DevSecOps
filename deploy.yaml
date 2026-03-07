@@ -1,5 +1,5 @@
 ---
-- name: Provisionnement de l'infrastructure
+- name: 1. Provisionnement de l'infrastructure
   hosts: hypervisors
   become: false
   vars_files:
@@ -7,11 +7,11 @@
   roles:
     - provision_vms
 
-- name: Lancement de la configuration
+- name: 2. Lancement de la configuration
   import_playbook: site.yaml
 
-- name: Validation du réseau et de l'interconnexion
+- name: 3. Validation du réseau et de l'interconnexion
   import_playbook: check_network.yaml
 
-- name: Audit de Sécurité DevSecOps
+- name: 4. Audit de Sécurité DevSecOps
   import_playbook: check_security.yaml

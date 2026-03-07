@@ -1,11 +1,11 @@
 ---
-- name: Créer le répertoire du projet sur l'hyperviseur
+- name: 1. Créer le répertoire du projet sur l'hyperviseur
   ansible.builtin.file:
     path: "{{ lab_path }}"
     state: directory
     mode: '0755'
 
-- name: Pré-créer les disques virtuels
+- name: 2. Pré-créer les disques virtuels
   ansible.builtin.command: >
     qemu-img create -f qcow2 -F qcow2 -b {{ ansible_env.HOME }}/masters/{{ hostvars[item]['master_image'] }}
     {{ lab_path }}/{{ hostvars[item]['vm_name'] }}.qcow2
@@ -13,45 +13,43 @@
   args:
     creates: "{{ lab_path }}/{{ hostvars[item]['vm_name'] }}.qcow2"
 
-- name: Générer le Netplan
+- name: 3. Générer le Netplan
   ansible.builtin.template:
     src: baking-netplan.j2
     dest: "{{ lab_path }}/{{ item }}-netplan.yaml"
     mode: '0600'
   loop: "{{ groups['vms'] }}"
 
-- name: Injection de Netplan et clé SSH dans les disques pré-créés
+- name: 4. Injecter le Netplan et la clé SSH
   ansible.builtin.command: >
     virt-customize -a {{ lab_path }}/{{ hostvars[item]['vm_name'] }}.qcow2
     --hostname {{ hostvars[item]['vm_name'] }}
-    --run-command "rm -f /etc/netplan/*.yaml"
     --upload {{ lab_path }}/{{ item }}-netplan.yaml:/etc/netplan/01-netcfg.yaml
-    --run-command "chmod 600 /etc/netplan/01-netcfg.yaml"
     --ssh-inject etu:file:{{ ansible_env.HOME }}/.ssh/authorized_keys
   loop: "{{ groups['vms'] }}"
   args:
     creates: "{{ lab_path }}/.{{ hostvars[item]['vm_name'] }}_baked"
   register: provision_vms_baking_result
-  notify: Créer témoin
+  notify: 1. Créer témoin
 
-- name: Générer switch.yaml
+- name: 5. Générer switch.yaml
   ansible.builtin.template:
     src: switch.yaml.j2
     dest: "{{ lab_path }}/switch.yaml"
     mode: '0644'
 
-- name: Générer lab.yaml
+- name: 6. Générer lab.yaml
   ansible.builtin.template:
     src: lab.yaml.j2
     dest: "{{ lab_path }}/lab.yaml"
     mode: '0644'
 
-- name: Appliquer la configuration du switch OVS
+- name: 7. Appliquer la configuration du switch OVS
   ansible.builtin.command: "{{ ansible_env.HOME }}/masters/scripts/switch-conf.py --apply {{ lab_path }}/switch.yaml"
   register: provision_vms_switch_result
   changed_when: provision_vms_switch_result.rc == 0
 
-- name: Démarrer les VMs
+- name: 8. Démarrer les VMs
   ansible.builtin.command: "{{ ansible_env.HOME }}/masters/scripts/lab-startup.py {{ lab_path }}/lab.yaml"
   args:
     chdir: "{{ lab_path }}"

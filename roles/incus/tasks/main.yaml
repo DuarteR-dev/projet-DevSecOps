@@ -1,36 +1,28 @@
 ---
-- name: S'assurer que Incus est installé
+- name: 1. Vérifier l'installation d'Incus
   ansible.builtin.apt:
     name: incus
     state: present
 
-- name: Initialiser Incus (Minimal)
+- name: 2. Initialiser Incus
   ansible.builtin.command: incus admin init --minimal
   args:
     creates: /var/lib/incus/cluster.crt
   when: inventory_hostname in ['vm-blue', 'vm-green']
 
-- name: Supprimer l'ancienne carte eth0 (pour éviter le conflit network/parent d'Incus)
+- name: 3. Supprimer l'ancienne carte eth0
   ansible.builtin.command: incus profile device remove default eth0
   failed_when: false
   changed_when: false
   when: inventory_hostname in ['vm-blue', 'vm-green']
 
-- name: Attacher le profil par défaut au bridge OVS avec le bon MTU
-  ansible.builtin.command: "incus profile device add default eth0 nic nictype=bridged parent={{ ovs_bridge_name }} mtu=1450"
-  register: incus_profile_add
-  changed_when: incus_profile_add.rc == 0
-  failed_when: false
+- name: 4. Créer la carte eth0 attachée au bridge OVS
+  ansible.builtin.command: "incus profile device add default eth0 nic nictype=bridged parent={{ ovs_bridge_name }} mtu={{ overlay_mtu }}"
+  register: profile_add
+  changed_when: profile_add.rc == 0
   when: inventory_hostname in ['vm-blue', 'vm-green']
 
-- name: Forcer la mise à jour si la carte existait déjà (Idempotence)
-  ansible.builtin.command: "incus profile device set default eth0 parent={{ ovs_bridge_name }} mtu=1450"
-  register: incus_profile_set
-  failed_when: false
-  changed_when: incus_profile_set.rc == 0
-  when: inventory_hostname in ['vm-blue', 'vm-green']
-
-- name: Définir la topologie des conteneurs pour la VM Bleue
+- name: 5. Définir la topologie des conteneurs pour la VM Bleue
   ansible.builtin.set_fact:
     my_containers:
       - { name: 'blueC0', ip: '192.0.2.60' }
@@ -39,7 +31,7 @@
       - { name: 'blueDHCP', ip: '192.0.2.250' }
   when: inventory_hostname == 'vm-blue'
 
-- name: Définir la topologie des conteneurs pour la VM Verte
+- name: 6. Définir la topologie des conteneurs pour la VM Verte
   ansible.builtin.set_fact:
     my_containers:
       - { name: 'greenC0', ip: '192.0.2.19' }
@@ -47,16 +39,16 @@
       - { name: 'greenDHCP', ip: '192.0.2.251' }
   when: inventory_hostname == 'vm-green'
 
-- name: Lancer les conteneurs requis par le lab
+- name: 7. Lancer les conteneurs
   ansible.builtin.command: "incus launch images:alpine/edge {{ item.name }}"
   args:
     creates: "/var/log/incus/{{ item.name }}"
   loop: "{{ my_containers }}"
   when: inventory_hostname in ['vm-blue', 'vm-green']
 
-- name: Configurer les IPs statiques et le DNS dans les conteneurs (Simulation IPAM)
+- name: 8. Configurer le réseau (IPAM) via injection de fichiers (Version simplifiée)
   ansible.builtin.shell: |
-    # Créer le fichier interfaces proprement via un push
+    # Injection du fichier interfaces
     echo "auto lo
     iface lo inet loopback
 
@@ -66,10 +58,10 @@
         netmask 255.255.255.0
         gateway 192.0.2.{{ '1' if inventory_hostname == 'vm-blue' else '2' }}" | incus file push - {{ item.name }}/etc/network/interfaces
 
-    # Pousser le DNS
+    # Injection DNS
     echo "nameserver 8.8.8.8" | incus file push - {{ item.name }}/etc/resolv.conf
 
-    # Redémarrer le conteneur pour appliquer
+    # Redémarrage pour appliquer
     incus restart {{ item.name }}
   loop: "{{ my_containers }}"
   when: inventory_hostname in ['vm-blue', 'vm-green']

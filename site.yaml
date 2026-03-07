@@ -1,15 +1,14 @@
 ---
-# --- PLAY 1 : Préparation depuis la machine DevNet ---
-- name: Préparation et récupération des clés SSH
+- name: PLAY 1 Préparation et récupération des clés SSH
   hosts: localhost
   gather_facts: true
   become: false
   tasks:
-    - name: Capturer l'IP de la machine DevNet
+    - name: 1. Enregistrer l'IP de DevNet
       ansible.builtin.set_fact:
         devnet_ip: "{{ ansible_default_ipv4.address }}"
 
-    - name: Attendre que le port SSH soit ouvert sur les VMs
+    - name: 2. Attendre que le port SSH soit ouvert sur les VMs
       ansible.builtin.wait_for:
         host: "{{ hostvars[item].ansible_host }}"
         port: 22
@@ -18,15 +17,14 @@
         timeout: 60
       loop: "{{ groups['vms'] }}"
 
-    - name: Scanner et ajouter les empreintes SSH aux known_hosts
+    - name: 3. Scanner et ajouter les empreintes SSH aux known_hosts
       ansible.builtin.known_hosts:
         name: "{{ hostvars[item].ansible_host }}"
         key: "{{ lookup('pipe', 'ssh-keyscan -H -t ed25519 ' + hostvars[item].ansible_host) }}"
         state: present
       loop: "{{ groups['vms'] }}"
 
-# --- PLAY 2 : Configuration des VMs  ---
-- name: Hardening & Réseau Overlay
+- name: PLAY 2 Hardening et Réseau Overlay
   hosts: vms
   become: true
   vars_files:

@@ -1,16 +1,16 @@
 ---
-- name: S'assurer que le paquet openvswitch-switch est installé
+- name: 1. Vérifier l' installation de openvswitch-switch
   ansible.builtin.apt:
     name: openvswitch-switch
     state: present
 
-- name: S'assurer que systemd-networkd est activé et démarré (requis par netplan)
+- name: 2. Vérifier que systemd-networkd est activé et démarré
   ansible.builtin.service:
     name: systemd-networkd
     state: started
     enabled: true
 
-- name: Générer la configuration Netplan pour le routeur (Rouge)
+- name: 3. Générer la configuration Netplan pour le routeur (Rouge)
   ansible.builtin.template:
     src: netplan-router.yaml.j2
     dest: /etc/netplan/01-netcfg.yaml
@@ -20,7 +20,7 @@
   when: inventory_hostname == 'vm-red'
   notify: Apply Netplan
 
-- name: Générer la configuration Netplan pour les tenants (Bleu/Vert)
+- name: 4. Générer la configuration Netplan pour les tenants (Bleu/Vert)
   ansible.builtin.template:
     src: netplan-tenant.yaml.j2
     dest: /etc/netplan/01-netcfg.yaml
@@ -30,5 +30,5 @@
   when: inventory_hostname in ['vm-blue', 'vm-green']
   notify: Apply Netplan
 
-- name: Forcer l'application de Netplan avant de passer à Incus
+- name: 5. Appliquer Netplan
   ansible.builtin.meta: flush_handlers

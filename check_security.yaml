@@ -5,57 +5,57 @@
   vars_files:
     - .iac_passwd.yaml
   tasks:
-    - name: Récupérer l'état des services du système
+    - name: 1. Récupérer l'état des services du système
       ansible.builtin.service_facts:
 
-    - name: Récupérer la configuration SSH effective (active)
+    - name: 2. Récupérer la configuration SSH
       ansible.builtin.command: sshd -T
       register: sshd_config_dump
       changed_when: false
 
-    - name: Valider la désactivation de PermitRootLogin
+    - name: 3. Désactiver PermitRootLogin
       ansible.builtin.assert:
         that:
           - "'permitrootlogin no' in sshd_config_dump.stdout"
         success_msg: "Sécurité SSH (1/2) : Root ne peut pas se connecter."
         fail_msg: "VULNÉRABILITÉ : PermitRootLogin n'est pas désactivé !"
 
-    - name: Valider la désactivation de PasswordAuthentication
+    - name: 4. Désactiver PasswordAuthentication
       ansible.builtin.assert:
         that:
           - "'passwordauthentication no' in sshd_config_dump.stdout"
         success_msg: "Sécurité SSH (2/2) : L'authentification par mot de passe est désactivée."
         fail_msg: "VULNÉRABILITÉ : L'authentification par mot de passe est toujours active !"
 
-    - name: Récupérer le statut de UFW
+    - name: 5. Récupérer le statut de UFW
       ansible.builtin.command: ufw status
       register: ufw_status
       changed_when: false
 
-    - name: Vérifier que le pare-feu UFW est bien actif
+    - name: 6. Vérifier que UFW est bien actif
       ansible.builtin.assert:
         that:
           - "'active' in ufw_status.stdout or 'actif' in ufw_status.stdout"
         success_msg: "Sécurité Réseau : Le pare-feu UFW est bien actif et filtre le trafic."
         fail_msg: "VULNÉRABILITÉ : Le pare-feu UFW n'est pas actif !"
 
-    - name: Installer Lynis pour l'audit de vulnérabilité
+    - name: 7. Installer Lynis pour l'audit de vulnérabilité
       ansible.builtin.apt:
         name: lynis
         state: present
         update_cache: yes
 
-    - name: Lancer le scan Lynis (Audit du système)
+    - name: 8. Lancer un audit Lynis
       ansible.builtin.command: lynis audit system --quick
       register: lynis_result
       changed_when: false
       failed_when: false
 
-    - name: Afficher le score d'audit Lynis (Hardening index)
+    - name: 9. Afficher le score d'audit Lynis
       ansible.builtin.debug:
         msg: "{{ lynis_result.stdout_lines | select('search', 'Hardening index') | list }}"
 
-    - name: Rapport d'Audit Global
+    - name: 10. Rapport d'Audit Global
       ansible.builtin.debug:
         msg: >
           "Audit DevSecOps terminé avec succès :
