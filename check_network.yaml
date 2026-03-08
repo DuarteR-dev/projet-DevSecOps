@@ -7,6 +7,7 @@
   vars:
     target_overlay_ip: "{{ hostvars['vm-green']['overlay_ip_v4'].split('/')[0] }}"
     target_container_ip: "{{ hostvars['vm-green']['my_containers'][0]['ip'] }}"
+    target_container_ipv6: "2001:db8:683::" 
     target_internet_ip: "8.8.8.8"
 
   tasks:
@@ -20,12 +21,23 @@
       register: ping_incus_overlay
       changed_when: false
 
-    - name: 3. Ping Internet depuis blueC0
+    - name: 3. Ping de blueC0 vers greenDHCP (SLAAC)
+      ansible.builtin.shell: |
+        set -o pipefail
+        incus exec blueC0 -- ping6 -c 3 2001:db8:683::1
+      changed_when: false
+
+    - name: 4. Ping Internet depuis blueC0
       ansible.builtin.command: incus exec blueC0 -- ping -c 3 {{ target_internet_ip }}
       register: ping_incus_internet
       changed_when: false
 
-    - name: 4. Afficher le bilan des tests réseau
+    - name: 5. Test de Traceroute (Vérification du tunnel VXLAN)
+      ansible.builtin.command: incus exec blueC0 -- traceroute -n {{ target_container_ip }}
+      register: traceroute_res
+      changed_when: false
+
+    - name: 6. Afficher le bilan des tests réseau
       ansible.builtin.debug:
         msg: |
           "Tous les tests réseau sont validés avec succès :
