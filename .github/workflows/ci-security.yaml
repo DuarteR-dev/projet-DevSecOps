@@ -37,8 +37,8 @@ jobs:
 
       - name: 5. Créer les fichiers secrets factices pour la CI
         run: |
-          touch .vault_pass.txt
-          touch .iac_passwd.yaml
+          echo "fakepassword" > .vault_pass.txt
+          echo "---" > .iac_passwd.yaml
 
       - name: 6. Run Ansible Lint
         run: ansible-lint -c .ansible-lint

@@ -37,6 +37,7 @@
   ansible.builtin.template:
     src: radvd.j2
     dest: /etc/radvd.conf
+    mode: '0644'
   notify: Recharger radvd
 
 - name: 4.2. Activer et démarrer le service radvd

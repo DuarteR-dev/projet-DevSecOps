@@ -52,8 +52,8 @@
   ansible.builtin.command: "{{ ansible_env.HOME }}/masters/scripts/lab-startup.py {{ lab_path }}/lab.yaml"
   args:
     chdir: "{{ lab_path }}"
-  register: start_vms
-  failed_when: 
-    - start_vms.rc != 0
-    - "'already in use' not in start_vms.stdout"
-  changed_when: start_vms.rc == 0
+  register: provision_vms_start
+  failed_when:
+    - provision_vms_start.rc != 0
+    - "'already in use' not in provision_vms_start.stdout"
+  changed_when: provision_vms_start.rc == 0

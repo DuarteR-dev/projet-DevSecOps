@@ -36,6 +36,7 @@
 - name: 6. Injecter la configuration réseau
   ansible.builtin.shell:
     cmd: |
+      set -o pipefail
       incus exec {{ item.name }} -- sysctl -w net.ipv6.conf.eth0.accept_ra=2
       cat <<EOF | incus file push - {{ item.name }}/etc/network/interfaces
       auto lo
