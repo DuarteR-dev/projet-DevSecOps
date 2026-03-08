@@ -6,7 +6,7 @@
   tasks:
     - name: 1. Enregistrer l'IP de DevNet
       ansible.builtin.set_fact:
-        devnet_ip: "{{ ansible_default_ipv4.address }}"
+        devnet_ip: "{{ ansible_facts['default_ipv4']['address'] }}"
 
     - name: 2. Attendre que le port SSH soit ouvert sur les VMs
       ansible.builtin.wait_for:

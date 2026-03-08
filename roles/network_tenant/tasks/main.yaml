@@ -55,21 +55,21 @@
   community.general.ufw:
     rule: allow
     src: "{{ item }}"
-  loop: "{{ overlay_networks }}"
+  loop: "{{ network_tenant_overlay_networks }}"
 
 - name: 7. UFW - Autoriser le trafic Overlay IPv4 & IPv6 (Conteneurs FORWARD)
   community.general.ufw:
     rule: allow
     route: true
     src: "{{ item }}"
-  loop: "{{ overlay_networks }}"
+  loop: "{{ network_tenant_overlay_networks }}"
 
 - name: 7.1. UFW - Autoriser le trafic retour d'Internet vers Overlay (Routage asymétrique)
   community.general.ufw:
     rule: allow
     route: true
     dest: "{{ item }}"
-  loop: "{{ overlay_networks }}"
+  loop: "{{ network_tenant_overlay_networks }}"
 
 - name: 8. UFW - Autoriser le trafic Overlay (SLAAC/ICMPv6 et DHCP)
   community.general.ufw:
