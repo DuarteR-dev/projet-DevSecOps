@@ -2,6 +2,6 @@
 ssh_port: 22
 permit_root_login: "no"
 password_authentication: "no"
-overlay_vip_ipv4: 192.0.2.254/24 
+overlay_vip_ipv4: 192.0.2.254/24
 overlay_vip_ipv6: "fe80:7::de"
 overlay_interface: "vxlanGreenBlue"

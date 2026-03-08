@@ -104,4 +104,3 @@
     proto: udp
     interface: "{{ ovs_bridge_name }}"
     direction: in
-
