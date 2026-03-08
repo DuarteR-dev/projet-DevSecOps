@@ -60,10 +60,15 @@
   when: item.type == 'dhcp'
   changed_when: true
 
-- name: 8. Attendre 3 secondes
-  ansible.builtin.wait_for:
-    timeout: 3
-  delegate_to: localhost
+- name: 8. Attendre que les conteneurs DHCP soient opérationnels
+  ansible.builtin.command: "incus exec {{ item.name }} -- ip -4 addr show eth0"
+  register: dhcp_ip_check
+  until: "'inet ' in dhcp_ip_check.stdout"
+  retries: 15
+  delay: 2
+  loop: "{{ my_containers }}"
+  when: item.type == 'dhcp'
+  changed_when: false
 
 - name: 9. Installer et configurer dnsmasq
   ansible.builtin.shell:
@@ -91,7 +96,12 @@
   when: item.type == 'client'
   changed_when: true
 
-- name: 11. Attendre 3 secondes
-  ansible.builtin.wait_for:
-    timeout: 3
-  delegate_to: localhost
+- name: 11. Attendre que les conteneurs DHCP soient opérationnels
+  ansible.builtin.command: "incus exec {{ item.name }} -- ip -4 addr show eth0"
+  register: dhcp_ip_check
+  until: "'inet ' in dhcp_ip_check.stdout"
+  retries: 15
+  delay: 2
+  loop: "{{ my_containers }}"
+  when: item.type == 'client'
+  changed_when: false
