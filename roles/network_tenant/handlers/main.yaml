@@ -1,13 +1,26 @@
 ---
 - name: Recharger les règles udev
   ansible.builtin.shell: udevadm control --reload-rules && udevadm trigger
-  changed_when: true
+  become: true
 
 - name: Apply Netplan
   ansible.builtin.command: netplan apply
-  changed_when: true
+  become: true
+
+- name: Recharger keepalived
+  ansible.builtin.service:
+    name: keepalived
+    state: restarted
+    enabled: true
+
+- name: Recharger dnsmasq
+  ansible.builtin.service:
+    name: dnsmasq
+    state: restarted
+    enabled: true
 
 - name: Recharger radvd
   ansible.builtin.service:
     name: radvd
     state: restarted
+    enabled: true

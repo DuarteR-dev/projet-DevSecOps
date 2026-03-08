@@ -2,8 +2,14 @@ interface {{ ovs_bridge_name }} {
     AdvSendAdvert on;
     MinRtrAdvInterval 3;
     MaxRtrAdvInterval 10;
-    prefix 2001:db8:683::/64 {
+    
+    AdvRASrcAddress {
+        {{ overlay_vip_ipv6 }}; 
+    };
+
+    prefix {{ network_tenant_overlay_networks[1] }} {
         AdvOnLink on;
         AdvAutonomous on;
+        AdvRouterAddr on;
     };
 };

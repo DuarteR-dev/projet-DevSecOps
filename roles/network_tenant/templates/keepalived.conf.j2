@@ -1,0 +1,20 @@
+vrrp_instance VI_VXLAN {
+    state {{ keepalived_state }}
+    interface {{ ovs_bridge_name }}
+    virtual_router_id 50
+    priority {{ keepalived_priority }}
+    advert_int 1
+    
+    authentication {
+        auth_type PASS
+        auth_pass Secr3t  # Raccourci à 8 caractères max (vu dans tes logs)
+    }
+
+    virtual_ipaddress {
+        {{ overlay_vip_ipv4 }}
+    }
+
+    virtual_ipaddress_excluded {
+        {{ overlay_vip_ipv6 }}
+    }
+}

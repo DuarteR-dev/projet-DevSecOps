@@ -4,6 +4,8 @@
     name:
       - openvswitch-switch
       - radvd
+      - keepalived
+      - dnsmasq
     state: present
     update_cache: true
 
@@ -33,61 +35,73 @@
     mode: '0600'
   notify: Apply Netplan
 
-- name: 4.1. Configurer radvd pour les annonces IPv6 (SLAAC)
+- name: 15. Forcer l'application du réseau avant de passer à Incus
+  ansible.builtin.meta: flush_handlers
+
+- name: 5. Configurer Keepalived pour la VIP
+  ansible.builtin.template:
+    src: keepalived.conf.j2
+    dest: /etc/keepalived/keepalived.conf
+    mode: '0644'
+  notify: Recharger keepalived
+
+- name: 6. Configurer Dnsmasq
+  ansible.builtin.template:
+    src: dnsmasq.conf.j2
+    dest: /etc/dnsmasq.conf
+    mode: '0644'
+  notify: Recharger dnsmasq
+
+- name: 7. Configurer radvd pour les annonces IPv6 (SLAAC)
   ansible.builtin.template:
     src: radvd.j2
     dest: /etc/radvd.conf
     mode: '0644'
   notify: Recharger radvd
 
-- name: 4.2. Activer et démarrer le service radvd
+- name: 8. Activer et démarrer le service radvd
   ansible.builtin.service:
     name: radvd
     state: started
     enabled: true
 
-- name: 5. UFW - Autoriser le trafic Underlay (Inter-VMs)
+- name: 9. UFW - Autoriser le trafic Underlay (Inter-VMs)
   community.general.ufw:
     rule: allow
     src: 172.18.0.0/16
 
-- name: 6. UFW - Autoriser le trafic Overlay IPv4 & IPv6 (Conteneurs INPUT)
+- name: 10. UFW - Autoriser le trafic Overlay IPv4 & IPv6 (Conteneurs INPUT)
   community.general.ufw:
     rule: allow
     src: "{{ item }}"
   loop: "{{ network_tenant_overlay_networks }}"
 
-- name: 7. UFW - Autoriser le trafic Overlay IPv4 & IPv6 (Conteneurs FORWARD)
+- name: 11. UFW - Autoriser le trafic Overlay IPv4 & IPv6 (Conteneurs FORWARD)
   community.general.ufw:
     rule: allow
     route: true
     src: "{{ item }}"
   loop: "{{ network_tenant_overlay_networks }}"
 
-- name: 7.1. UFW - Autoriser le trafic retour d'Internet vers Overlay (Routage asymétrique)
+- name: 12. UFW - Autoriser le trafic retour d'Internet vers Overlay
   community.general.ufw:
     rule: allow
     route: true
     dest: "{{ item }}"
   loop: "{{ network_tenant_overlay_networks }}"
 
-- name: 8. UFW - Autoriser le trafic Overlay (SLAAC/ICMPv6 et DHCP)
+- name: 13. UFW - Autoriser Keepalived (VRRP) sur l'Overlay
   community.general.ufw:
     rule: allow
+    proto: vrrp
+    interface: "{{ ovs_bridge_name }}"
     direction: in
-    interface: "{{ item }}"
-  loop:
-    - "{{ ovs_bridge_name }}"
-    - "vxlanGreenBlue"
 
-- name: 9. UFW - Autoriser les interfaces locales (Bridge et VXLAN)
+- name: 14. UFW - Autoriser le DHCP sur l'Overlay
   community.general.ufw:
     rule: allow
-    interface: "{{ item }}"
+    port: '67'
+    proto: udp
+    interface: "{{ ovs_bridge_name }}"
     direction: in
-  loop:
-    - "{{ ovs_bridge_name }}"
-    - "vxlanGreenBlue"
 
-- name: 10. Forcer l'application du réseau avant de passer à Incus
-  ansible.builtin.meta: flush_handlers

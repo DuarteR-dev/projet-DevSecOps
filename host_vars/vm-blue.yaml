@@ -10,11 +10,19 @@ underlay_gw: 172.18.169.1
 
 vxlan_id: 683
 vxlan_remote_ip: 172.18.170.10 # IP VM Verte
-ovs_bridge_name: C-3PO-BLUE
+ovs_bridge_name: C-3PO
 overlay_ip_v4: 192.0.2.1/24
 overlay_ip_v6: "2001:db8:683::2/64"
 overlay_gw_v4: 192.0.2.1
+overlay_local_ip: "10.50.0.252/24"
 overlay_mtu: 1450
+
+keepalived_state: "MASTER"
+keepalived_priority: 100
+dhcp_peer_role: "primary"
+underlay_sync_ip: "192.0.2.1"
+peer_sync_ip: "192.0.2.2"
+
 my_containers:
   - name: blueDHCP
     type: dhcp

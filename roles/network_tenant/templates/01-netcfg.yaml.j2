@@ -37,6 +37,7 @@ network:
       addresses:
         - {{ overlay_ip_v4 }}
         - "{{ overlay_ip_v6 }}"
+        - {{ overlay_local_ip }}
       mtu: {{ overlay_mtu }}
       ipv6-address-generation: eui64
       routing-policy:
