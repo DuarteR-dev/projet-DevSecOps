@@ -62,8 +62,8 @@
 
 - name: 8. Attendre que les conteneurs DHCP soient opérationnels
   ansible.builtin.command: "incus exec {{ item.name }} -- ip -4 addr show eth0"
-  register: dhcp_ip_check
-  until: "'inet ' in dhcp_ip_check.stdout"
+  register: incus_dhcp_ip_check
+  until: "'inet ' in incus_dhcp_ip_check.stdout"
   retries: 15
   delay: 2
   loop: "{{ my_containers }}"
@@ -98,7 +98,7 @@
 
 - name: 11. Attendre que les conteneurs DHCP soient opérationnels
   ansible.builtin.command: "incus exec {{ item.name }} -- ip -4 addr show eth0"
-  register: dhcp_ip_check
+  register: incus_dhcp_ip_check
   until: "'inet ' in dhcp_ip_check.stdout"
   retries: 15
   delay: 2
