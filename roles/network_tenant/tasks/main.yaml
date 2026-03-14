@@ -5,7 +5,6 @@
       - openvswitch-switch
       - radvd
       - keepalived
-      - dnsmasq
     state: present
     update_cache: true
 

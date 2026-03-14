@@ -107,16 +107,16 @@
   when: item.type == 'client'
   changed_when: false
 
-- name: 12. Installer Nginx sur les clients
+- name: 12. Installer Nginx et forcer la configuration du serveur Web
   ansible.builtin.shell:
     cmd: |
       incus exec {{ item.name }} -- apk update
       incus exec {{ item.name }} -- apk add nginx
+      incus exec {{ item.name }} -- mkdir -p /var/www/html
+      incus exec {{ item.name }} -- sh -c 'echo "server { listen 80; root /var/www/html; index index.html; }" > /etc/nginx/http.d/default.conf'
+      incus exec {{ item.name }} -- sh -c 'echo "<h1>Bienvenue sur {{ item.name }} (Tenant VXLAN)</h1>" > /var/www/html/index.html'
       incus exec {{ item.name }} -- rc-update add nginx default
-      incus exec {{ item.name }} -- rc-service nginx start || /etc/init.d/nginx start
-      incus exec {{ item.name }} -- sh -c 'mkdir -p /var/www/localhost/htdocs /usr/share/nginx/html'
-      incus exec {{ item.name }} -- sh -c 'echo "<h1>Bienvenue sur {{ item.name }} (Tenant VXLAN)</h1>" > /var/www/localhost/htdocs/index.html'
-      incus exec {{ item.name }} -- sh -c 'echo "<h1>Bienvenue sur {{ item.name }} (Tenant VXLAN)</h1>" > /usr/share/nginx/html/index.html'
+      incus exec {{ item.name }} -- rc-service nginx restart || /etc/init.d/nginx restart
   loop: "{{ my_containers }}"
   when: item.type == 'client'
   changed_when: false
