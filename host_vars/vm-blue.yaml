@@ -19,7 +19,6 @@ overlay_mtu: 1450
 
 keepalived_state: "MASTER"
 keepalived_priority: 100
-dhcp_peer_role: "primary"
 underlay_sync_ip: "192.0.2.1"
 peer_sync_ip: "192.0.2.2"
 

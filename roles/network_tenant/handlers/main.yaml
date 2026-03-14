@@ -15,12 +15,6 @@
     state: restarted
     enabled: true
 
-- name: Recharger dnsmasq
-  ansible.builtin.service:
-    name: dnsmasq
-    state: restarted
-    enabled: true
-
 - name: Recharger radvd
   ansible.builtin.service:
     name: radvd
