@@ -58,6 +58,8 @@
 - name: 7. Redémarrer les serveurs DHCP
   ansible.builtin.command: incus restart {{ item.item.name }}
   loop: "{{ incus_launch.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
   when: item.changed | default(false) and item.item.type == 'dhcp'
   changed_when: true
 
@@ -91,9 +93,11 @@
   when: item.type == 'dhcp'
   changed_when: false
 
-- name: 10. Redémarrer les clients pour déclencher le DHCP
+- name: 10. Redémarrer les clients pour déclencher DHCP
   ansible.builtin.command: incus restart {{ item.item.name }}
   loop: "{{ incus_launch.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
   when: item.changed | default(false) and item.item.type == 'client'
   changed_when: true
 
