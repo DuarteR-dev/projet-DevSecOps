@@ -1,5 +1,5 @@
 ---
-- name: 1. Installer les paquets necessaires
+- name: 1. Installer les paquets
   ansible.builtin.apt:
     name:
       - ufw
@@ -7,16 +7,28 @@
       - vim
       - curl
       - ethtool
+      - auditd
+      - acct
+      - debsums
+      - fail2ban
+      - rkhunter
     state: present
     update_cache: true
     cache_valid_time: 3600
 
-- name: 2. Sécuriser la configuration SSH
+- name: 2. Durcissement global de la configuration SSH
   ansible.builtin.copy:
     dest: /etc/ssh/sshd_config.d/99-ansible-hardening.conf
     content: |
       PermitRootLogin {{ permit_root_login | default('no') }}
       PasswordAuthentication {{ password_authentication | default('no') }}
+      LogLevel VERBOSE
+      X11Forwarding no
+      AllowTcpForwarding no
+      ClientAliveInterval 300
+      ClientAliveCountMax 2
+      MaxAuthTries 3
+      LoginGraceTime 60
     mode: '0600'
   notify: Redémarrer SSH
 
@@ -33,3 +45,65 @@
     state: enabled
     policy: deny
     direction: incoming
+
+- name: 5. Activer le service d'audit
+  ansible.builtin.service:
+    name: auditd
+    state: started
+    enabled: true
+
+- name: 6. Durcissement du noyau
+  ansible.posix.sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: true
+  loop:
+    - { name: 'kernel.sysrq', value: '0' }
+    - { name: 'kernel.core_uses_pid', value: '1' }
+    - { name: 'net.ipv4.tcp_syncookies', value: '1' }
+    - { name: 'net.ipv4.conf.all.log_martians', value: '1' }
+    - { name: 'net.ipv4.conf.default.log_martians', value: '1' }
+    - { name: 'fs.suid_dumpable', value: '0' }
+    - { name: 'net.ipv4.conf.all.accept_redirects', value: '0' }
+    - { name: 'net.ipv4.conf.default.accept_redirects', value: '0' }
+    - { name: 'net.ipv6.conf.all.accept_redirects', value: '0' }
+    - { name: 'net.ipv6.conf.default.accept_redirects', value: '0' }
+
+- name: 7. Durcissement des politiques de comptes
+  ansible.builtin.lineinfile:
+    path: /etc/login.defs
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  loop:
+    - { regexp: '^PASS_MAX_DAYS', line: 'PASS_MAX_DAYS   90' }
+    - { regexp: '^PASS_MIN_DAYS', line: 'PASS_MIN_DAYS   1' }
+    - { regexp: '^UMASK', line: 'UMASK           027' }
+    - { regexp: '^SHA_CRYPT_MIN_ROUNDS', line: 'SHA_CRYPT_MIN_ROUNDS 5000' }
+    - { regexp: '^SHA_CRYPT_MAX_ROUNDS', line: 'SHA_CRYPT_MAX_ROUNDS 5000' }
+
+- name: 8. Protéger la mémoire
+  ansible.builtin.lineinfile:
+    path: /etc/security/limits.conf
+    line: '* hard core 0'
+    insertbefore: EOF
+
+- name: 9. Désactiver les modules vulnérables
+  ansible.builtin.copy:
+    dest: /etc/modprobe.d/lynis-hardening.conf
+    content: |
+      install cramfs /bin/true
+      install freevxfs /bin/true
+      install jffs2 /bin/true
+      install hfs /bin/true
+      install hfsplus /bin/true
+      install squashfs /bin/true
+      install udf /bin/true
+      install usb-storage /bin/true
+    mode: '0644'
+
+- name: 10. Ajouter un message d'avertissement
+  ansible.builtin.copy:
+    dest: /etc/issue.net
+    content: "ATTENTION : Acces restreint au personnel autorise uniquement. Toute tentative d'effraction sera tracee.\n"
+    mode: '0644'

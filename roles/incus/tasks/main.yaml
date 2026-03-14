@@ -22,7 +22,7 @@
   when: "ovs_bridge_name not in incus_profile_output.stdout"
   changed_when: true
 
-- name: 4. Vérifier les conteneurs
+- name: 4. Vérifier les conteneurs existants
   ansible.builtin.command: incus list -c n --format csv
   register: incus_list
   changed_when: false
@@ -31,9 +31,10 @@
   ansible.builtin.command: "incus launch images:alpine/edge {{ item.name }}"
   loop: "{{ my_containers }}"
   when: "item.name not in incus_list.stdout"
+  register: incus_launch
   changed_when: true
 
-- name: 6. Injecter la configuration réseau
+- name: 6. Injecter la configuration réseau de base
   ansible.builtin.shell:
     cmd: |
       set -o pipefail
@@ -52,12 +53,12 @@
       {% endif %}
       EOF
   loop: "{{ my_containers }}"
-  changed_when: true
+  changed_when: false
 
-- name: 7. Redémarrer les serveurs DHCP pour appliquer l'IP statique
-  ansible.builtin.command: incus restart {{ item.name }}
-  loop: "{{ my_containers }}"
-  when: item.type == 'dhcp'
+- name: 7. Redémarrer les serveurs DHCP
+  ansible.builtin.command: incus restart {{ item.item.name }}
+  loop: "{{ incus_launch.results }}"
+  when: item.changed | default(false) and item.item.type == 'dhcp'
   changed_when: true
 
 - name: 8. Attendre que les conteneurs DHCP soient opérationnels
@@ -70,11 +71,11 @@
   when: item.type == 'dhcp'
   changed_when: false
 
-- name: 9. Installer et configurer dnsmasq
+- name: 9. Installer et configurer dnsmasq sur les conteneurs DHCP
   ansible.builtin.shell:
     cmd: |
       set -o pipefail
-      incus exec {{ item.name }} -- sh -c 'echo "nameserver 8.8.8.8" > /etc/resolv.conf'
+      incus exec {{ item.name }} -- sh -c 'echo "nameserver {{ dns_server }}" > /etc/resolv.conf'
       incus exec {{ item.name }} -- apk update
       incus exec {{ item.name }} -- apk add dnsmasq
       cat <<EOF | incus file push - {{ item.name }}/etc/dnsmasq.conf
@@ -82,26 +83,40 @@
       port=0
       dhcp-range={{ item.dhcp_range }},255.255.255.0,12h
       dhcp-option=option:router,{{ overlay_ip_v4.split('/')[0] }}
-      dhcp-option=option:dns-server,8.8.8.8
+      dhcp-option=option:dns-server,{{ dns_server }}
       EOF
       incus exec {{ item.name }} -- rc-update add dnsmasq default
       incus exec {{ item.name }} -- rc-service dnsmasq restart || /etc/init.d/dnsmasq restart
   loop: "{{ my_containers }}"
   when: item.type == 'dhcp'
+  changed_when: false
+
+- name: 10. Redémarrer les clients pour déclencher le DHCP
+  ansible.builtin.command: incus restart {{ item.item.name }}
+  loop: "{{ incus_launch.results }}"
+  when: item.changed | default(false) and item.item.type == 'client'
   changed_when: true
 
-- name: 10. Redémarrer les clients pour qu'ils obtiennent une IP via DHCP
-  ansible.builtin.command: incus restart {{ item.name }}
-  loop: "{{ my_containers }}"
-  when: item.type == 'client'
-  changed_when: true
-
-- name: 11. Attendre que les conteneurs DHCP soient opérationnels
+- name: 11. Attendre que les conteneurs clients aient reçu leur IP via DHCP
   ansible.builtin.command: "incus exec {{ item.name }} -- ip -4 addr show eth0"
-  register: incus_dhcp_ip_check
-  until: "'inet ' in incus_dhcp_ip_check.stdout"
+  register: incus_client_ip_check
+  until: "'inet ' in incus_client_ip_check.stdout"
   retries: 15
   delay: 2
+  loop: "{{ my_containers }}"
+  when: item.type == 'client'
+  changed_when: false
+
+- name: 12. Installer Nginx sur les clients
+  ansible.builtin.shell:
+    cmd: |
+      incus exec {{ item.name }} -- apk update
+      incus exec {{ item.name }} -- apk add nginx
+      incus exec {{ item.name }} -- rc-update add nginx default
+      incus exec {{ item.name }} -- rc-service nginx start || /etc/init.d/nginx start
+      incus exec {{ item.name }} -- sh -c 'mkdir -p /var/www/localhost/htdocs /usr/share/nginx/html'
+      incus exec {{ item.name }} -- sh -c 'echo "<h1>Bienvenue sur {{ item.name }} (Tenant VXLAN)</h1>" > /var/www/localhost/htdocs/index.html'
+      incus exec {{ item.name }} -- sh -c 'echo "<h1>Bienvenue sur {{ item.name }} (Tenant VXLAN)</h1>" > /usr/share/nginx/html/index.html'
   loop: "{{ my_containers }}"
   when: item.type == 'client'
   changed_when: false

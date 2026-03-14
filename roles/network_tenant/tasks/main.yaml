@@ -35,24 +35,17 @@
     mode: '0600'
   notify: Apply Netplan
 
-- name: 15. Forcer l'application du réseau avant de passer à Incus
+- name: 5. Forcer l'application du réseau avant de passer à Incus
   ansible.builtin.meta: flush_handlers
 
-- name: 5. Configurer Keepalived pour la VIP
+- name: 6. Configurer Keepalived pour la VIP
   ansible.builtin.template:
     src: keepalived.conf.j2
     dest: /etc/keepalived/keepalived.conf
     mode: '0644'
   notify: Recharger keepalived
 
-- name: 6. Configurer Dnsmasq
-  ansible.builtin.template:
-    src: dnsmasq.conf.j2
-    dest: /etc/dnsmasq.conf
-    mode: '0644'
-  notify: Recharger dnsmasq
-
-- name: 7. Configurer radvd pour les annonces IPv6 (SLAAC)
+- name: 7. Configurer radvd pour les annonces IPv6
   ansible.builtin.template:
     src: radvd.j2
     dest: /etc/radvd.conf
