@@ -56,11 +56,9 @@
   changed_when: false
 
 - name: 7. Redémarrer les serveurs DHCP
-  ansible.builtin.command: incus restart {{ item.item.name }}
-  loop: "{{ incus_launch.results }}"
-  loop_control:
-    label: "{{ item.item.name }}"
-  when: item.changed | default(false) and item.item.type == 'dhcp'
+  ansible.builtin.command: incus restart {{ item.name }}
+  loop: "{{ my_containers }}"
+  when: item.type == 'dhcp'
   changed_when: true
 
 - name: 8. Attendre que les conteneurs DHCP soient opérationnels

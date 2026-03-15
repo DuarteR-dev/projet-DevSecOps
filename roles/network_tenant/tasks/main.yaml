@@ -96,3 +96,21 @@
     proto: udp
     interface: "{{ ovs_bridge_name }}"
     direction: in
+
+- name: 14. UFW - Autoriser le DHCP sur l'Overlay
+  community.general.ufw:
+    rule: allow
+    port: '67'
+    proto: udp
+    interface: "{{ ovs_bridge_name }}"
+    direction: in
+
+- name: 14.5. Activer et démarrer Keepalived
+  ansible.builtin.service:
+    name: keepalived
+    state: started
+    enabled: true
+
+- name: 15. Forcer l'application du réseau avant Incus
+  ansible.builtin.meta: flush_handlers
+  
