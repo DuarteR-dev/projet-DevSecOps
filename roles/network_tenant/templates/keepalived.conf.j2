@@ -7,7 +7,7 @@ vrrp_instance VI_VXLAN {
     
     authentication {
         auth_type PASS
-        auth_pass Secr3t
+        auth_pass {{ keepalived_password }}
     }
 
     virtual_ipaddress {
