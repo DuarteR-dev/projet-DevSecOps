@@ -33,7 +33,6 @@ touch .iac_passwd.yaml
 
 2. Ajoutez-y vos variables sensibles :
 ```yaml
----
 hypervisor_user: "xxxxxxxx"
 hypervisor_pass: "xxxxxxx"
 keepalived_auth_pass: "Secr3t"
